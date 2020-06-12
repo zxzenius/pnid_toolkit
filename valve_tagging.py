@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from pnid import PnID
 from pprint import PrettyPrinter
+import time
 
 def get_type_code(type_name):
     if type_name == 'GATE':
@@ -17,8 +18,10 @@ def get_type_code(type_name):
         return 'NV'
     return None
 
-pnid = PnID(r'D:\Work\Project\XY2019P02-KAYAN.25MMSCFD.LNG\PnID\IFC\KAYAN.LNG.TRAIN.ColdBox.PnID_2020.0605.dwg')
+start_time = time.time()
+pnid = PnID(r'D:\Work\Project\XY2019P02-KAYAN.25MMSCFD.LNG\PnID\IssueForHazop\KAYAN.LNG.TRAIN.PnID_ISSUE FOR HAZOP_2020.0529B.dwg')
 valves = dict()
+counter = 0
 for valve in pnid.valves:
     dwg_number = pnid.locate_dwg_no(valve.pos)[-4::]
     if dwg_number not in valves:
@@ -35,6 +38,10 @@ for valve in pnid.valves:
             tag_handle.TextString = valve.tag
             tag_handle.Height = 2.5
             tag_handle.ScaleFactor = 0.6
-
+            counter += 1
+print(f'{counter} valves processed.')
+end_time = time.time()
+time_spent = end_time - start_time
+print('Time spent: %.2fs' % time_spent)
 # pp = PrettyPrinter()
 # pp.pprint(valves)
