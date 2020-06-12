@@ -6,6 +6,8 @@ from pathlib import Path
 import time
 import pprint
 import logging
+from entities import Line, Bubble, Valve
+from point import Point
 
 logger = logging.getLogger('pnid')
 logger.setLevel(logging.INFO)
@@ -41,211 +43,44 @@ def get_document(app, filename):
     return app.Documents.Open(filename)
 
 
-def get_attributes(block):
+def get_attributes(acad_block_ref):
     """
     Wrapper of Block.GetAttributes
     Usage: attrs = get_attributes(blockRef)
            attrs['TAG'].TextString = 'hello'
-    :param block: BlockReference
+    :param acad_block_ref: BlockReference
     :return Dict contends AcadAttributeReference objects
     """
     attributes = dict()
-    for attribute in block.GetAttributes():
+    for attribute in acad_block_ref.GetAttributes():
         attributes[attribute.TagString.upper()] = attribute
 
     return attributes
 
 
-# for qualified name
-def gen_pipe_tag(service_tag, unit_tag, sequence, size, class_tag, insulation=''):
-    pipe_tag = '%s%s%s-%s-%s' % (service_tag, unit_tag, sequence, size, class_tag)
-    if insulation:
-        pipe_tag += '-%s' % insulation
-    return pipe_tag
+def get_attribute(ent, attr_tag):
+    """
+    get specified attribute of ent
+    :param ent: block_ref
+    :param attr_tag: attribute.tagstring
+    :return: AcadAttributeReference
+    """
+    for attribute in ent.GetAttributes():
+        if attribute.TagString == attr_tag:
+            return attribute
+
+    return None
 
 
-def gen_instrument_tag(function_letters, unit_tag, sequence, suffix=''):
-    instrument_tag = '%s-%s%s%s' % (function_letters, unit_tag, sequence, suffix)
-    return instrument_tag
-
-
-class Pipe:
-    def __init__(self, tag):
-        """
-        Line tag
-        service(alpha)number(number) - size(number) - class_tag [- insulation(alpha)]
-        example: NG01011-50-B2RF1-H
-        :param tag:
-        """
-        pattern = r'([A-Z]+)(\d{1})(\d+)-(\d*|DN)-(\w*)-*([A-Z]*)'
-        match = re.fullmatch(pattern, tag)
-        if match:
-            self._service, self._unit, self._sequence, self._size, self._class_tag, self._insulation = match.groups()
-            self._tag = tag
-        else:
-            raise ValueError('LineTag "%s" is not right.' % tag)
-
-    def __repr__(self):
-        return 'Pipe"%s"' % self._tag
-
-    def __str__(self):
-        return self._tag
-
-    def _gen_tag(self):
-        sub_tags = [self._service + self._unit + self._sequence, self._size, self._class_tag]
-        if self._insulation:
-            sub_tags.append(self._insulation)
-
-        self._tag = '-'.join(sub_tags)
-
-    @property
-    def tag(self):
-        return self._tag
-
-    @property
-    def service(self):
-        return self._service
-
-    @service.setter
-    def service(self, value):
-        if value != self._service:
-            self._service = value
-            self._gen_tag()
-
-    @property
-    def unit(self):
-        return self._unit
-
-    @unit.setter
-    def unit(self, value):
-        if value != self._unit:
-            self._unit = value
-            self._gen_tag()
-
-    @property
-    def sequence(self):
-        return self._sequence
-
-    @sequence.setter
-    def sequence(self, value):
-        if value != self._sequence:
-            self._sequence = value
-            self._gen_tag()
-
-    @property
-    def size(self):
-        return self._size
-
-    @size.setter
-    def size(self, value):
-        if value != self._size:
-            self._size = value
-            self._gen_tag()
-
-    @property
-    def class_tag(self):
-        return self._class_tag
-
-    @class_tag.setter
-    def class_tag(self, value):
-        if value != self._class_tag:
-            self._class_tag = value
-            self._gen_tag()
-
-    @property
-    def insulation(self):
-        return self._insulation
-
-    @insulation.setter
-    def insulation(self, value):
-        if value != self._insulation:
-            self._insulation = value
-            self._gen_tag()
-
-    @property
-    def name(self):
-        return self._service + self.number
-
-    @property
-    def number(self):
-        return self._unit + self._sequence
-
-
-class Instrument:
-    def __init__(self, function_letters, loop_tag):
-        func_match = re.fullmatch(r'([A-Z])([A-Z]+)', function_letters)
-        loop_match = re.fullmatch(r'(\d{1})(\d+)(.*)', loop_tag)
-        if func_match and loop_match:
-            self._unit, self._sequence, self._suffix = loop_match.groups()
-        else:
-            raise ValueError('Inst %s-%s is not right' % (function_letters, loop_tag))
-        self._function = function_letters
-        self._loop_tag = loop_tag
-
-    def __repr__(self):
-        return 'Inst"%s"' % self.tag
-
-    def __str__(self):
-        return self.tag
-
-    @property
-    def tag(self):
-        return gen_instrument_tag(self._function, self._unit, self._sequence, self._suffix)
-
-    @property
-    def function(self):
-        return self._function
-
-    @property
-    def unit(self):
-        return self._unit
-
-    @property
-    def sequence(self):
-        return self._sequence
-
-    @property
-    def suffix(self):
-        return self._suffix
-
-    @property
-    def loop_number(self):
-        return self._unit + self._sequence
-
-    @property
-    def loop_tag(self):
-        return self._loop_tag
-
-    @property
-    def loop_name(self):
-        return gen_instrument_tag(self.loop_letter, self._unit, self._sequence)
-
-    @property
-    def loop_letter(self):
-        if self._function in ('PSV', 'PRV', 'FO'):
-            return self._function
-        # 'PD', 'TD' for PDT, TDT
-        elif self._function[1] == 'D':
-            return self._function[:2]
-        # 'PG', 'TG'
-        elif self.is_gauge:
-            return self._function
-        else:
-            return self._function[0]
-
-    @property
-    def is_valve(self):
-        if self._function.endswith('V'):
-            return True
-        else:
-            return False
-
-    @property
-    def is_gauge(self):
-        if self._function.endswith('G'):
-            return True
-        else:
-            return False
+def is_in_box(point, bottom_left, top_right):
+    """
+    Return true if input point is in the rectangle defined by bottom_left & top_right
+    :param point:
+    :param bottom_left:
+    :param top_right:
+    :return: boolean
+    """
+    return (bottom_left.x < point.x < top_right.x) and (bottom_left.y < point.y < top_right.y)
 
 
 class PnID:
@@ -254,42 +89,111 @@ class PnID:
         self.doc = get_document(self.app, file_path)
         if self.doc:
             self._read()
+            self._post_process()
 
     def _read(self):
-        self.pipes = []
-        self.instruments = []
+        self.lines = []
+        self.bubbles = []
+        self.borders = []
+        self.title_blocks = dict()
         counter = 0
-        self.error_pipes = []
-        self.error_instruments = []
+        self.error_lines = []
+        self.error_bubbles = []
+        self.valves = []
 
         for item in self.doc.ModelSpace:
             if item.ObjectName == 'AcDbBlockReference':
                 block_ref = CastTo(item, 'IAcadBlockReference2')
-                block_name = block_ref.EffectiveName.upper()
+                block_name = block_ref.EffectiveName
                 # For pipe
-                if block_name == 'PIPE_TAG':
-                    self._read_pipe(get_attributes(block_ref))
+                if block_name == 'pipe_tag':
+                    # self._read_pipe(get_attributes(block_ref))
                     continue
                 # For Inst Bubble
                 if block_name in ('DI_LOCAL', 'SH_PRI_FRONT'):
                     # attributes = get_attributes(block_ref)
-                    self._read_inst(get_attributes(block_ref))
+                    # self._read_inst(get_attributes(block_ref))
+                    continue
+                # For Border, get bottom-left & top-right coordinates of bounding box
+                if block_name == 'Border.A1':
+                    self._read_border(block_ref)
+                    continue
+                # For Title Block
+                if block_name == 'TitleBlock.XinDi':
+                    self._read_title_block(block_ref)
+                    continue
+                # For HandValve, not Control Valve
+                if block_name.startswith('VAL_') and not block_name.startswith('VAL_CTRL'):
+                    self._read_valve(block_ref)
                     continue
 
     def _read_pipe(self, attributes):
         attr = attributes['TAG']
         try:
-            self.pipes.append(Pipe(attr.TextString))
+            self.lines.append(Line(attr.TextString))
         except ValueError:
-            self.error_pipes.append(attr.TextString)
+            self.error_lines.append(attr.TextString)
 
     def _read_inst(self, attributes):
         function_letters = attributes['FUNCTION'].TextString
         loop_tag = attributes['TAG'].TextString
         try:
-            self.instruments.append(Instrument(function_letters, loop_tag))
+            self.bubbles.append(Bubble(function_letters, loop_tag))
         except ValueError:
-            self.error_instruments.append('%s-%s' % (function_letters, loop_tag))
+            self.error_bubbles.append('%s-%s' % (function_letters, loop_tag))
+
+    def _read_border(self, block_ref):
+        """
+        Get btm-left & top-right of border block using GetBoundingBox, append to borders
+        :param block_ref:
+        :return:
+        """
+        bottom_left, top_right = block_ref.GetBoundingBox()
+        self.borders.append((Point(bottom_left), Point(top_right)))
+
+    def _read_title_block(self, block_ref):
+        """
+        Get dwg_no & insertion point of title block, insert to a dict to avoid duplicated dwg_no
+        :param block_ref:
+        :return:
+        """
+        dwg_number = get_attribute(block_ref, 'DWG.NO.').TextString
+        self.title_blocks[dwg_number] = Point(block_ref.InsertionPoint)
+
+    def _read_valve(self, block_ref):
+        valve = Valve()
+        valve.handle = block_ref.Handle
+        valve.pos = Point(block_ref.InsertionPoint)
+        valve.tag_handle = get_attribute(block_ref, 'TAG').Handle
+        valve.type_name = block_ref.EffectiveName[4::]
+        self.valves.append(valve)
+
+    def gen_dwg_map(self):
+        """
+        Generate dwg_no <-> coordinates for entity locating
+        :return: a dict
+        """
+        result = dict()
+        for dwg_number, insert_point in self.title_blocks.items():
+            for bottom_left, top_right in self.borders:
+                if is_in_box(insert_point, bottom_left, top_right):
+                    result[dwg_number] = (bottom_left, top_right)
+                    break
+        return result
+
+    def locate_dwg_no(self, point):
+        """
+        Locate drawing number for input point
+        :param point: Point
+        :return: drawing number
+        """
+        for dwg_no, (bottom_left, top_right) in self.dwg_map.items():
+            if is_in_box(point, bottom_left, top_right):
+                return dwg_no
+        return None
+
+    def _post_process(self):
+        self.dwg_map = self.gen_dwg_map()
 
 
 def gen_loops(instruments):
@@ -327,23 +231,27 @@ if __name__ == '__main__':
     # print(line)
     pp = pprint.PrettyPrinter()
     start_time = time.time()
-    pnid = PnID(r'D:\Work\Project\XY2019P02-KAYAN.25MMSCFD.LNG\PnID\KAYAN.25.LNG.PnID_2019.1127.dwg')
+    pnid = PnID(r'D:\Work\Project\XY2019P02-KAYAN.25MMSCFD.LNG\PnID\IFC\KAYAN.LNG.TRAIN.ColdBox.PnID_2020.0605.dwg')
     end_time = time.time()
     time_spent = end_time - start_time
     print('Time spent: %.2fs' % time_spent)
 
-    logger.info('%s Pipes, %s Instruments' % (len(pnid.pipes), len(pnid.instruments)))
+    # logger.info('%s Pipes, %s Instruments' % (len(pnid.lines), len(pnid.bubbles)))
     # testing renumber 5 -> 4
-    pipe_bones = gen_bones(pnid.pipes, 'service')
-    inst_bones = gen_bones(pnid.instruments, 'loop_letter')
-    pp.pprint(pipe_bones)
-    pp.pprint(inst_bones)
+    # pipe_bones = gen_bones(pnid.lines, 'service')
+    # inst_bones = gen_bones(pnid.bubbles, 'loop_letter')
+    # pp.pprint(pipe_bones)
+    # pp.pprint(inst_bones)
     # generate mapping
-    for pipe in pnid.pipes:
-        new_name = '%s%02d%02d' % (pipe.service, int(pipe.unit), pipe_bones[pipe.unit][pipe.service].index(pipe.sequence)+1)
-        print('%s -> %s' % (pipe.name, new_name))
+    # for pipe in pnid.lines:
+    #     new_name = '%s%02d%02d' % (pipe.service, int(pipe.unit), pipe_bones[pipe.unit][pipe.service].index(pipe.sequence)+1)
+    #     print('%s -> %s' % (pipe.name, new_name))
 
     # print({inst.function for inst in pnid.instruments})
     # gen loops
     # print(gen_loops(pnid.instruments))
-
+    # pp.pprint(pnid.borders)
+    # pp.pprint(pnid.title_blocks)
+    # pp.pprint(pnid.locate_dwg_no(Point((298, -3590, 0))))
+    pp.pprint(pnid.dwg_map)
+    pp.pprint(pnid.valves)
