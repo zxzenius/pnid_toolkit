@@ -119,7 +119,7 @@ class PnID:
                     self._read_border(block_ref)
                     continue
                 # For Title Block
-                if block_name == 'TitleBlock.XinDi':
+                if block_name.startswith('TitleBlock.Xin'):
                     self._read_title_block(block_ref)
                     continue
                 # For HandValve, not Control Valve
@@ -158,7 +158,8 @@ class PnID:
         :return:
         """
         dwg_number = get_attribute(block_ref, 'DWG.NO.').TextString
-        self.title_blocks[dwg_number] = Point(block_ref.InsertionPoint)
+        if dwg_number:
+            self.title_blocks[dwg_number] = Point(block_ref.InsertionPoint)
 
     def _read_valve(self, block_ref):
         valve = Valve()

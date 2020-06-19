@@ -19,11 +19,15 @@ def get_type_code(type_name):
     return None
 
 start_time = time.time()
-pnid = PnID(r'D:\Work\Project\XY2019P02-KAYAN.25MMSCFD.LNG\PnID\IssueForHazop\KAYAN.LNG.TRAIN.PnID_ISSUE FOR HAZOP_2020.0529B.dwg')
+pnid = PnID(r'D:\Work\Project\XY2019P02-KAYAN.25MMSCFD.LNG\PnID\IssueForHazop\KAYAN.GENERATORS.P&ID2020.0612H.dwg')
 valves = dict()
 counter = 0
 for valve in pnid.valves:
-    dwg_number = pnid.locate_dwg_no(valve.pos)[-4::]
+    dwg_number = pnid.locate_dwg_no(valve.pos)
+    if dwg_number:
+        dwg_number = dwg_number[-4::]
+    else:
+        continue
     if dwg_number not in valves:
         valves[dwg_number] = dict()
     if valve.type_name not in valves[dwg_number]:
