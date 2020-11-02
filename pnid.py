@@ -18,6 +18,7 @@ logger.addHandler(log_handler)
 def get_application(version='', visible=True):
     """
     AutoCAD Application COM Object
+    Also work for BricsCAD
 
     :param version:
         default is latest version
@@ -28,6 +29,8 @@ def get_application(version='', visible=True):
         AutoCAD Application Object
     """
     prog_id = 'AutoCAD.Application'
+    # for BricsCAD
+    # prog_id = 'BricscadApp.AcadApplication'
     if version:
         prog_id = '.'.join((prog_id, version))
     app = EnsureDispatch(prog_id)
@@ -85,7 +88,7 @@ def is_in_box(point, bottom_left, top_right):
 
 class PnID:
     def __init__(self, file_path):
-        self.app = get_application(version='16')
+        self.app = get_application()
         self.doc = get_document(self.app, file_path)
         if self.doc:
             self._read()
@@ -103,7 +106,10 @@ class PnID:
 
         for item in self.doc.ModelSpace:
             if item.ObjectName == 'AcDbBlockReference':
-                block_ref = CastTo(item, 'IAcadBlockReference2')
+                # For AutoCAD 2006, using IAcadBlockReference2
+                # block_ref = CastTo(item, 'IAcadBlockReference2')
+                # 2007 or higher version, using IAcadBlockReference
+                block_ref = CastTo(item, 'IAcadBlockReference')
                 block_name = block_ref.EffectiveName
                 # For pipe
                 if block_name == 'pipe_tag':
@@ -254,5 +260,6 @@ if __name__ == '__main__':
     # pp.pprint(pnid.borders)
     # pp.pprint(pnid.title_blocks)
     # pp.pprint(pnid.locate_dwg_no(Point((298, -3590, 0))))
-    pp.pprint(pnid.dwg_map)
-    pp.pprint(pnid.valves)
+    # pp.pprint(pnid.dwg_map)
+    # pp.pprint(pnid.valves)
+    print(f'Acad.app.version: {pnid.app.version}')

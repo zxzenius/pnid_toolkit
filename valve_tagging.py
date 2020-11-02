@@ -3,6 +3,7 @@ from pnid import PnID
 from pprint import PrettyPrinter
 import time
 
+
 def get_type_code(type_name):
     if type_name == 'GATE':
         return 'GT'
@@ -18,14 +19,19 @@ def get_type_code(type_name):
         return 'NV'
     return None
 
+
 start_time = time.time()
-pnid = PnID(r'D:\Work\Project\XY2019P02-KAYAN.25MMSCFD.LNG\PnID\IssueForHazop\KAYAN.GENERATORS.P&ID2020.0612H.dwg')
+# pnid = PnID(r'D:\Work\Project\XY2019P02-KAYAN.25MMSCFD.LNG\PnID\After.HAZOP\KAYAN.LNG.TRAIN.PnID_2020.0910.dwg')
+pnid = PnID(r'D:\Incoming\temptask\test_for_autotag.dwg')
 valves = dict()
 counter = 0
 for valve in pnid.valves:
     dwg_number = pnid.locate_dwg_no(valve.pos)
     if dwg_number:
         dwg_number = dwg_number[-4::]
+        # select specific drawing
+        # if int(dwg_number) // 100 != 7:
+        #     continue
     else:
         continue
     if dwg_number not in valves:
