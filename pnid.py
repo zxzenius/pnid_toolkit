@@ -15,11 +15,13 @@ log_handler = logging.StreamHandler()
 logger.addHandler(log_handler)
 
 
-def get_application(version='', visible=True):
+def get_application(app='AutoCAD', version='', visible=True):
     """
     AutoCAD Application COM Object
     Also work for BricsCAD
-
+    :param app:
+        app name of 'AutoCAD' or 'BricsCAD', case insensitive
+        default is 'AutoCAD'
     :param version:
         default is latest version
         '16' for version 2006
@@ -28,9 +30,12 @@ def get_application(version='', visible=True):
     :return:
         AutoCAD Application Object
     """
-    prog_id = 'AutoCAD.Application'
-    # for BricsCAD
-    # prog_id = 'BricscadApp.AcadApplication'
+    if app.lower() == 'autocad':
+        prog_id = 'AutoCAD.Application'
+    elif app.lower() == 'bricscad':
+        prog_id = 'BricscadApp.AcadApplication'
+    else:
+        raise ValueError('app should be "AutoCAD" or "Bricscad"')
     if version:
         prog_id = '.'.join((prog_id, version))
     app = EnsureDispatch(prog_id)
@@ -38,7 +43,11 @@ def get_application(version='', visible=True):
     return app
 
 
-def get_document(app, filename):
+def get_document(app, filename=None):
+    # load current file
+    if filename is None:
+        return app.ActiveDocument
+
     for document in app.Documents:
         if Path(document.FullName) == Path(filename):
             return document
@@ -84,6 +93,40 @@ def is_in_box(point, bottom_left, top_right):
     :return: boolean
     """
     return (bottom_left.x < point.x < top_right.x) and (bottom_left.y < point.y < top_right.y)
+
+
+class Drawing:
+    def __init__(self, app_name='autocad', filepath=None):
+        self.app = get_application(app=app_name)
+        self.doc = get_document(self.app, filepath)
+
+    def get_all_text(self):
+        for item in self.doc.ModelSpace:
+            if item.ObjectName == 'AcDbBlockReference':
+                # For AutoCAD 2006, using IAcadBlockReference2
+                # block_ref = CastTo(item, 'IAcadBlockReference2')
+                # 2007 or higher version, using IAcadBlockReference
+                block_ref = CastTo(item, 'IAcadBlockReference')
+                for attribute in block_ref.GetAttributes():
+                    if attribute.TextString:
+                        yield attribute
+            if item.ObjectName == 'AcDbMText':
+                mtext = CastTo(item, 'IAcadMText')
+                yield mtext
+            if item.ObjectName == 'AcDbText':
+                text = CastTo(item, 'IAcadText')
+                yield text
+
+    def replace(self, pattern, replacement):
+        # scanning all
+        regex = re.compile(pattern)
+        counter = 0
+        for item in self.get_all_text():
+            if (result := regex.sub(replacement, item.TextString)) != item.TextString:
+                item.TextString = result
+                counter += 1
+
+        print(f'{counter} items replaced.')
 
 
 class PnID:
