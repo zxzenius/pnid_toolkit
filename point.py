@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
-class Point:
-    def __init__(self, point_tuple):
-        self.x, self.y, self.z = point_tuple
+from typing import NamedTuple
 
-    def __repr__(self):
-        return f'Point({self.x}, {self.y}, {self.z})'
+
+class Point(NamedTuple):
+    x: float
+    y: float
+    z: float
