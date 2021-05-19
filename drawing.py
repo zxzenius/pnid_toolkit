@@ -76,11 +76,21 @@ def get_dynamic_props(block_ref) -> dict:
 class Drawing:
     def __init__(self, app_name='autocad', filepath=None):
         self.app = get_application(app=app_name)
-        self.doc = get_document(self.app, filepath)
-        self.model_space = self.doc.ModelSpace
-        self.block_ref_dict = self.walk_block_refs()
+        self.doc = None
+        self.block_ref_dict = None
+        self.load(filepath)
 
-    def clear_selections(self):
+    def load(self, filepath=None):
+        self.doc = get_document(self.app, filepath)
+        if not self.doc:
+            self.block_ref_dict = self.gen_block_refs_dict()
+        else:
+            self.block_ref_dict = None
+
+    def reload(self):
+        self.load()
+
+    def reset_selection_sets(self):
         for index in reversed(range(self.doc.SelectionSets)):
             self.doc.SelectionSets.Item(index).Delete()
 
@@ -103,11 +113,11 @@ class Drawing:
         entities = self.select(constants.acSelectionSetAll, filter_type=filter_type, filter_data=filter_data)
         return entities
 
-    def walk_block_refs(self, brutal_method: bool = False) -> dict:
+    def gen_block_refs_dict(self, brute_force: bool = False) -> dict:
         print("Indexing block_refs...")
         block_refs = defaultdict(list)
-        if brutal_method:
-            for entity in self.model_space:
+        if brute_force:
+            for entity in self.doc.ModelSpace:
                 if entity.ObjectName == "AcDbBlockReference":
                     entity = CastTo(entity, "IAcadBlockReference")
                     real_name = entity.EffectiveName
@@ -122,17 +132,14 @@ class Drawing:
         return block_refs
 
     def regen_block_ref_map(self):
-        self.block_ref_dict = self.walk_block_refs()
-
-    def get_all_block_refs(self) -> List:
-        return self.select_by_type(dxf_names.INSERT)
+        self.block_ref_dict = self.gen_block_refs_dict()
 
     def get_block_refs(self, name: str = None) -> List:
         if name:
             return self.block_ref_dict.get(name)
         return self.select_by_type(dxf_names.INSERT)
 
-    def find_block_refs(self, name_pattern: str) -> List:
+    def find_block_refs_by_name(self, name_pattern: str) -> List:
         result = []
         prog = re.compile(name_pattern)
         for effective_name in self.block_ref_dict:
@@ -203,7 +210,7 @@ class Drawing:
         block_refs = self.get_block_refs(old_block_name)
         for old_block_ref in block_refs:
             insertion_point = Point(*old_block_ref.InsertionPoint)
-            new_block_ref = self.model_space.InsertBlock(vt_point(insertion_point), new_block_name, 1, 1, 1, 0, None)
+            new_block_ref = self.doc.ModelSpace.InsertBlock(vt_point(insertion_point), new_block_name, 1, 1, 1, 0, None)
             new_block_ref.Rotation = old_block_ref.Rotation
             new_block_ref.Layer = old_block_ref.Layer
             old_attributes = get_attributes(old_block_ref)
@@ -218,7 +225,7 @@ class Drawing:
 
     def replace_block_ref(self, old_block_ref, new_block_name):
         insertion_point = Point(*old_block_ref.InsertionPoint)
-        new_block_ref = self.model_space.InsertBlock(vt_point(insertion_point), new_block_name, 1, 1, 1, 0, None)
+        new_block_ref = self.doc.ModelSpace.InsertBlock(vt_point(insertion_point), new_block_name, 1, 1, 1, 0, None)
         return new_block_ref
 
 
