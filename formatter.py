@@ -35,7 +35,9 @@ def sort_borders(borders: List) -> List[List]:
 
 
 def sort_drawings(selections: List[Selection]) -> List[List]:
-    sorted_by_x = sorted(selections, key=lambda selection: selection.x)
+    border_width = 841
+    border_height = 594
+    sorted_by_x = sorted(selections, key=lambda sel: sel.x)
     db = dict()
     for selection in sorted_by_x:
         y = selection.y
@@ -53,29 +55,25 @@ def reset_selection_sets(selection_sets):
         selection_sets.Item(index).Delete()
 
 
-if __name__ == "__main__":
-    drawing = Drawing()
-    border_width = 841
-    border_height = 594
+def align_borders(dwg: Drawing):
     distance_x = 900
     distance_y = 660
     margin_y = 20
     start_x = 0
     start_y = 0
     border_name = "Border.A1"
-    borders = drawing.get_block_refs(border_name)
+    borders = dwg.get_block_refs(border_name)
     selections = []
     counter = 1
     for border in borders:
         print(f"Preprocessing {counter}/{len(borders)}")
-        # border = CastTo(border, 'IAcadBlockReference')
         # Add delay for processing
         sleep(0.05)
         bottom_left, top_right = border.GetBoundingBox()
         point_btm_left = Point(*bottom_left)
         point2 = Point(*top_right)
         point1 = Point(point_btm_left.x, point_btm_left.y - margin_y, point_btm_left.z)
-        entities = drawing.select(constants.acSelectionSetCrossing, point1, point2)
+        entities = dwg.select(constants.acSelectionSetCrossing, point1, point2)
         selections.append(Selection(border, entities))
         counter += 1
     # Sorting
@@ -91,3 +89,13 @@ if __name__ == "__main__":
             selection.move(point1, point2)
             new_x += distance_x
         new_y -= distance_y
+
+
+def format_pipe_tag(dwg: Drawing):
+    pass
+
+
+if __name__ == "__main__":
+    drawing = Drawing()
+    drawing.replace_text(r'(.*B\d{1}SRF\d{1})(\(.*\))', r'\g<1>')
+    drawing.replace_block("TAG_NUMBER", "pipe_tag")

@@ -1,5 +1,6 @@
 import re
-from typing import List
+from collections import defaultdict
+from typing import List, Generator
 from uuid import uuid4
 
 import constants
@@ -103,24 +104,21 @@ class Drawing:
         return entities
 
     def walk_block_refs(self, brutal_method: bool = False) -> dict:
-        block_refs = dict()
+        print("Indexing block_refs...")
+        block_refs = defaultdict(list)
         if brutal_method:
             for entity in self.model_space:
                 if entity.ObjectName == "AcDbBlockReference":
                     entity = CastTo(entity, "IAcadBlockReference")
                     real_name = entity.EffectiveName
-                    if real_name not in block_refs:
-                        block_refs[real_name] = [entity]
-                    else:
-                        block_refs[real_name].append(entity)
+                    block_refs[real_name].append(entity)
         else:
             for entity in self.get_block_refs():
+                entity = CastTo(entity, "IAcadBlockReference")
                 real_name = entity.EffectiveName
-                if real_name not in block_refs:
-                    block_refs[real_name] = [entity]
-                else:
-                    block_refs[real_name].append(entity)
+                block_refs[real_name].append(entity)
 
+        print("Indexing complete.")
         return block_refs
 
     def regen_block_ref_map(self):
@@ -169,25 +167,27 @@ class Drawing:
             mode = constants.acSelectionSetAll
             return self.select(mode)
 
-    def get_all_text(self):
-        for item in self.doc.ModelSpace:
-            if item.ObjectName == 'AcDbBlockReference':
-                # For AutoCAD 2006, using IAcadBlockReference2
-                # block_ref = CastTo(item, 'IAcadBlockReference2')
-                # 2007 or higher version, using IAcadBlockReference
-                block_ref = CastTo(item, 'IAcadBlockReference')
-                for attribute in block_ref.GetAttributes():
-                    if attribute.TextString:
-                        yield attribute
-            if item.ObjectName == 'AcDbMText':
-                mtext = CastTo(item, 'IAcadMText')
-                yield mtext
-            if item.ObjectName == 'AcDbText':
-                text = CastTo(item, 'IAcadText')
-                yield text
+    def get_all_text(self) -> Generator:
+        for block_ref in self.select_by_type(dxf_names.INSERT):
+            # For AutoCAD 2006, using IAcadBlockReference2
+            # block_ref = CastTo(item, 'IAcadBlockReference2')
+            # 2007 or higher version, using IAcadBlockReference
+            block_ref = CastTo(block_ref, 'IAcadBlockReference')
+            for attribute in block_ref.GetAttributes():
+                if attribute.TextString:
+                    yield attribute
 
-    def replace(self, pattern, replacement):
+        for m_text in self.select_by_type(dxf_names.MTEXT):
+            m_text = CastTo(m_text, 'IAcadMText')
+            yield m_text
+
+        for text in self.select_by_type(dxf_names.TEXT):
+            text = CastTo(text, 'IAcadText')
+            yield text
+
+    def replace_text(self, pattern, replacement):
         # scanning all
+        print("Start text replacing.")
         regex = re.compile(pattern)
         counter = 0
         for item in self.get_all_text():
@@ -195,14 +195,17 @@ class Drawing:
                 item.TextString = result
                 counter += 1
 
-        print(f'{counter} items replaced.')
+        print(f'Replaced {counter} texts.')
 
     def replace_block(self, old_block_name, new_block_name):
+        print("Start block replacing.")
         counter = 0
         block_refs = self.get_block_refs(old_block_name)
         for old_block_ref in block_refs:
             insertion_point = Point(*old_block_ref.InsertionPoint)
             new_block_ref = self.model_space.InsertBlock(vt_point(insertion_point), new_block_name, 1, 1, 1, 0, None)
+            new_block_ref.Rotation = old_block_ref.Rotation
+            new_block_ref.Layer = old_block_ref.Layer
             old_attributes = get_attributes(old_block_ref)
             new_attributes = get_attributes(new_block_ref)
             for tag in new_attributes:
@@ -211,7 +214,7 @@ class Drawing:
             old_block_ref.Delete()
             counter += 1
 
-        print(f"{counter} block_refs replaced.")
+        print(f"Replaced {counter} block_refs.")
 
     def replace_block_ref(self, old_block_ref, new_block_name):
         insertion_point = Point(*old_block_ref.InsertionPoint)
