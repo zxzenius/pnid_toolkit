@@ -62,7 +62,7 @@ def align_borders(dwg: Drawing):
     start_x = 0
     start_y = 0
     border_name = "Border.A1"
-    borders = dwg.get_block_refs(border_name)
+    borders = dwg.get_blockrefs(border_name)
     selections = []
     counter = 1
     for border in borders:

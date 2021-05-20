@@ -55,9 +55,6 @@ def is_in_box(point, bottom_left, top_right):
     return (bottom_left.x < point.x < top_right.x) and (bottom_left.y < point.y < top_right.y)
 
 
-
-
-
 class PnID:
     def __init__(self, file_path):
         self.app = get_application()
