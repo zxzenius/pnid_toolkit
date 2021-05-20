@@ -10,12 +10,11 @@ from win32com.client import CastTo, Dispatch
 from win32com.client.gencache import EnsureDispatch
 
 import dxf
-import dxf_names
 from point import Point
 from utils import vt_int_array, vt_variant_array, vt_point
 
 
-def get_application(app='AutoCAD', version='', early_binding=False, visible=True):
+def get_application(app='AutoCAD', version='', early_binding=True, visible=True):
     """
     AutoCAD Application COM Object
     Also work for BricsCAD
@@ -75,19 +74,21 @@ def get_dynamic_props(blockref) -> dict:
 
 
 class Drawing:
-    def __init__(self, app_name='autocad', filepath=None):
-        self.app = get_application(app=app_name)
+    def __init__(self, app_name='autocad', filepath=None, early_binding=True, load_data=True):
+        self.early_binding = early_binding
+        self.app = get_application(app=app_name, early_binding=early_binding)
         self.doc = None
         self.blockref_db = defaultdict(list)
-        self.load(filepath)
+        self.load(filepath, load_data)
 
     def init_db(self):
         self.blockref_db = self.gen_blockref_dict()
 
-    def load(self, filepath=None):
+    def load(self, filepath=None, load_data=True):
         self.doc = get_document(self.app, filepath)
         print(f"Current File: {self.doc.Name}")
-        self.init_db()
+        if load_data:
+            self.init_db()
 
     def reload(self):
         self.init_db()
@@ -118,40 +119,52 @@ class Drawing:
         entities = self._select_by_type_and_name(dxf_entity.type_name, entity_name)
         return [CastTo(entity, dxf_entity.interface) for entity in entities]
 
-    def gen_blockref_dict(self, brute_force: bool = False) -> dict:
+    def gen_blockref_dict(self, by_select: bool = True) -> dict:
         print("Indexing blockrefs...")
-        block_refs_dict = defaultdict(list)
+        counter = 0
+        db = defaultdict(list)
         if not self.doc:
-            return block_refs_dict
+            return db
 
-        if brute_force:
-            for entity in self.doc.ModelSpace:
-                if entity.ObjectName == "AcDbBlockReference":
-                    entity = CastTo(entity, "IAcadBlockReference")
-                    real_name = entity.EffectiveName
-                    block_refs_dict[real_name].append(entity)
+        if not by_select:
+            blockrefs = self.iter_blockrefs()
         else:
-            for entity in self.get_blockrefs():
-                entity = CastTo(entity, "IAcadBlockReference")
-                real_name = entity.EffectiveName
-                block_refs_dict[real_name].append(entity)
+            blockrefs = self.select_blockrefs()
+        for blockref in blockrefs:
+            db[blockref.EffectiveName].append(blockref)
+            counter += 1
 
-        print("Indexing complete.")
-        return block_refs_dict
+        print(f"Indexing complete, {counter} blockrefs.")
+        return db
 
-    def get_blockrefs(self) -> List:
-        return self.select_entities(dxf_names.INSERT)
+    def get_blockrefs(self, name: str = None) -> List:
+        if name:
+            return self.get_blockrefs_by_name(name)
+
+        all_blockrefs = []
+        for blockrefs in self.blockref_db.values():
+            all_blockrefs.extend(blockrefs)
+        return all_blockrefs
+
+    def select_blockrefs(self, name: str = None) -> List:
+        if name:
+            return self.select_entities_by_name(dxf.BlockRef, name)
+
+        return self.select_entities(dxf.BlockRef)
+
+    def iter_entities(self, dxf_entity: dxf.Entity) -> Iterator:
+        for item in self.doc.ModelSpace:
+            if item.ObjectName == dxf_entity.object_name:
+                ent = CastTo(item, dxf_entity.interface)
+                yield ent
 
     def iter_blockrefs(self) -> Iterator:
-        for entity in self.doc.ModelSpace:
-            if entity.ObjectName == "AcDbBlockReference":
-                blockref = CastTo(entity, "IAcadBlockReference")
-                yield blockref
+        return self.iter_entities(dxf.BlockRef)
 
-    def get_block_refs_by_name(self, name: str):
+    def get_blockrefs_by_name(self, name: str):
         return self.blockref_db.get(name)
 
-    def find_block_refs_by_name(self, name_pattern: str) -> List:
+    def search_blockrefs(self, name_pattern: str) -> List:
         result = []
         prog = re.compile(name_pattern)
         for effective_name in self.blockref_db:
@@ -171,40 +184,36 @@ class Drawing:
         return [CastTo(entity, dxf_entity.interface) for entity in entities]
 
     def get_block(self, name: str):
-        counter = 0
         for block in self.doc.Blocks:
-            counter += 1
             if block.Name == name:
                 return block
-        # return self.select_by_type_and_name("BLOCK", name)
         return None
 
-    def get_entities_in_area(self, point1: Point, point2: Point, crossing=True) -> List:
+    def select_entities_in_area(self, point1: Point, point2: Point, crossing=True) -> List:
         if crossing:
             mode = constants.acSelectionSetCrossing
         else:
             mode = constants.acSelectionSetWindow
         return self.select(mode, point1, point2)
 
-    def get_all_entities(self) -> List:
+    def select_all_entities(self) -> List:
         return self.select(constants.acSelectionSetAll)
 
-    def get_all_text(self) -> Iterator:
-        for block_ref in self.select_entities(dxf_names.INSERT):
+    def iter_all_texts(self) -> Iterator:
+        for blockref in self.select_blockrefs():
             # For AutoCAD 2006, using IAcadBlockReference2
             # block_ref = CastTo(item, 'IAcadBlockReference2')
             # 2007 or higher version, using IAcadBlockReference
-            block_ref = CastTo(block_ref, 'IAcadBlockReference')
-            for attribute in block_ref.GetAttributes():
+            for attribute in blockref.GetAttributes():
                 if attribute.TextString:
                     yield attribute
 
-        for m_text in self.select_entities(dxf_names.MTEXT):
-            m_text = CastTo(m_text, 'IAcadMText')
+        for m_text in self.select_entities(dxf.MText):
+            # m_text = CastTo(m_text, 'IAcadMText')
             yield m_text
 
-        for text in self.select_entities(dxf_names.TEXT):
-            text = CastTo(text, 'IAcadText')
+        for text in self.select_entities(dxf.Text):
+            # text = CastTo(text, 'IAcadText')
             yield text
 
     def replace_text(self, pattern, replacement):
@@ -212,7 +221,7 @@ class Drawing:
         print("Start text replacing.")
         regex = re.compile(pattern)
         counter = 0
-        for item in self.get_all_text():
+        for item in self.iter_all_texts():
             if (result := regex.sub(replacement, item.TextString)) != item.TextString:
                 item.TextString = result
                 counter += 1
@@ -222,26 +231,26 @@ class Drawing:
     def replace_block(self, old_block_name, new_block_name):
         print("Start block replacing.")
         counter = 0
-        block_refs = self.blockref_db[old_block_name]
-        for old_block_ref in block_refs:
-            insertion_point = Point(*old_block_ref.InsertionPoint)
-            new_block_ref = self.doc.ModelSpace.InsertBlock(vt_point(insertion_point), new_block_name, 1, 1, 1, 0, None)
-            new_block_ref.Rotation = old_block_ref.Rotation
-            new_block_ref.Layer = old_block_ref.Layer
-            old_attributes = get_attributes(old_block_ref)
-            new_attributes = get_attributes(new_block_ref)
+        blockrefs = self.blockref_db[old_block_name]
+        for old_blockref in blockrefs:
+            insertion_point = Point(*old_blockref.InsertionPoint)
+            new_blockref = self.doc.ModelSpace.InsertBlock(vt_point(insertion_point), new_block_name, 1, 1, 1, 0, None)
+            new_blockref.Rotation = old_blockref.Rotation
+            new_blockref.Layer = old_blockref.Layer
+            old_attributes = get_attributes(old_blockref)
+            new_attributes = get_attributes(new_blockref)
             for tag in new_attributes:
                 if tag in old_attributes:
                     new_attributes[tag].TextString = old_attributes[tag].TextString # noqa
-            old_block_ref.Delete()
+            old_blockref.Delete()
             counter += 1
 
-        print(f"Replaced {counter} block_refs.")
+        print(f"Replaced {counter} blockrefs.")
 
-    def replace_block_ref(self, old_block_ref, new_block_name):
-        insertion_point = Point(*old_block_ref.InsertionPoint)
-        new_block_ref = self.doc.ModelSpace.InsertBlock(vt_point(insertion_point), new_block_name, 1, 1, 1, 0, None)
-        return new_block_ref
+    def replace_blockref(self, old_blockref, new_block_name):
+        insertion_point = Point(*old_blockref.InsertionPoint)
+        new_blockref = self.doc.ModelSpace.InsertBlock(vt_point(insertion_point), new_block_name, 1, 1, 1, 0, None)
+        return new_blockref
 
 
 if __name__ == "__main__":
