@@ -6,6 +6,8 @@ from pathlib import Path
 import time
 import pprint
 import logging
+
+from drawing import Drawing
 from entities import Line, Bubble, Valve
 from point import Point
 
@@ -13,35 +15,6 @@ logger = logging.getLogger('pnid')
 logger.setLevel(logging.INFO)
 log_handler = logging.StreamHandler()
 logger.addHandler(log_handler)
-
-
-def get_attributes(acad_block_ref):
-    """
-    Wrapper of Block.GetAttributes
-    Usage: attrs = get_attributes(blockRef)
-           attrs['TAG'].TextString = 'hello'
-    :param acad_block_ref: BlockReference
-    :return Dict contends AcadAttributeReference objects
-    """
-    attributes = dict()
-    for attribute in acad_block_ref.GetAttributes():
-        attributes[attribute.TagString.upper()] = attribute
-
-    return attributes
-
-
-def get_attribute(ent, attr_tag):
-    """
-    get specified attribute of ent
-    :param ent: block_ref
-    :param attr_tag: attribute.tagstring
-    :return: AcadAttributeReference
-    """
-    for attribute in ent.GetAttributes():
-        if attribute.TagString == attr_tag:
-            return attribute
-
-    return None
 
 
 def is_in_box(point, bottom_left, top_right):
@@ -55,13 +28,16 @@ def is_in_box(point, bottom_left, top_right):
     return (bottom_left.x < point.x < top_right.x) and (bottom_left.y < point.y < top_right.y)
 
 
-class PnID:
-    def __init__(self, file_path):
-        self.app = get_application()
-        self.doc = get_document(self.app, file_path)
-        if self.doc:
-            self._read()
-            self._post_process()
+class PnID(Drawing):
+    # def __init__(self, file_path):
+    #     self.app = get_application()
+    #     self.doc = get_document(self.app, file_path)
+    #     if self.doc:
+    #         self._read()
+    #         self._post_process()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.db = {}
 
     def _read(self):
         self.lines = []
@@ -143,6 +119,45 @@ class PnID:
         valve.tag_handle = get_attribute(block_ref, 'TAG').Handle
         valve.type_name = block_ref.EffectiveName[4::]
         self.valves.append(valve)
+
+    def read(self):
+        self.lines = []
+        self.bubbles = []
+        self.borders = []
+        self.title_blocks = dict()
+        counter = 0
+        self.error_lines = []
+        self.error_bubbles = []
+        self.valves = []
+
+        for item in self.doc.ModelSpace:
+            if item.ObjectName == 'AcDbBlockReference':
+                # For AutoCAD 2006, using IAcadBlockReference2
+                # block_ref = CastTo(item, 'IAcadBlockReference2')
+                # 2007 or higher version, using IAcadBlockReference
+                block_ref = CastTo(item, 'IAcadBlockReference')
+                block_name = block_ref.EffectiveName
+                # For pipe
+                if block_name == 'pipe_tag':
+                    # self._read_pipe(get_attributes(block_ref))
+                    continue
+                # For Inst Bubble
+                if block_name in ('DI_LOCAL', 'SH_PRI_FRONT'):
+                    # attributes = get_attributes(block_ref)
+                    # self._read_inst(get_attributes(block_ref))
+                    continue
+                # For Border, get bottom-left & top-right coordinates of bounding box
+                if block_name == 'Border.A1':
+                    self._read_border(block_ref)
+                    continue
+                # For Title Block
+                if block_name.startswith('TitleBlock.Xin'):
+                    self._read_title_block(block_ref)
+                    continue
+                # For HandValve, not Control Valve
+                if block_name.startswith('VAL_') and not block_name.startswith('VAL_CTRL'):
+                    self._read_valve(block_ref)
+                    continue
 
     def gen_dwg_map(self):
         """
