@@ -147,6 +147,8 @@ class Drawing:
         return all_blockrefs
 
     def select_blockrefs(self, name: str = None) -> List:
+        # not suit for select anonymous blockref by name, which name is "*U..."
+        # "name" is not "EffectiveName"
         if name:
             return self.select_entities_by_name(dxf.BlockRef, name)
 
