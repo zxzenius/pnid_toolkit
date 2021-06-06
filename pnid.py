@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import re
-from win32com.client.gencache import EnsureDispatch
 from win32com.client import CastTo, Dispatch
 from pathlib import Path
 import time
