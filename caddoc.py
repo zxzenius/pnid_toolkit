@@ -10,7 +10,7 @@ from win32com.client import CastTo, Dispatch
 from win32com.client.gencache import EnsureDispatch
 
 import dxf
-from acad import BlockRef
+from acad import BlkRef
 from point import Point
 from utils import vt_int_array, vt_variant_array, vt_point
 

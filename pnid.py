@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 from collections import defaultdict
-from typing import List
+from typing import List, Union
 
 from win32com.client import CastTo, Dispatch
 from pathlib import Path
@@ -9,6 +9,7 @@ import time
 import pprint
 import logging
 
+from acad.blkref import BlkRef
 from caddoc import CADDoc
 from entities import Line, Bubble, Valve
 from point import Point
@@ -17,6 +18,8 @@ logger = logging.getLogger('pnid')
 logger.setLevel(logging.INFO)
 log_handler = logging.StreamHandler()
 logger.addHandler(log_handler)
+
+DWG_NO_SUFFIX = ""
 
 
 def is_in_box(point: Point, bottom_left: Point, top_right: Point) -> bool:
@@ -57,10 +60,16 @@ class Drawing:
     def __contains__(self, point: Point):
         return is_in_box(point, self.min_point, self.max_point)
 
+    def __repr__(self):
+        return f"<Drawing '{self.number}'>"
 
-def retagging(drawings: List[Drawing]):
-    unit = 0
-    seq = 1
+    def __str__(self):
+        return str(self.number)
+
+
+def tagging_with_unit(drawings: List[Drawing], start_unit: int = 1, start_seq: int = 1):
+    unit = start_unit - 1
+    seq = start_seq
     index = None
     for drawing in drawings:
         if drawing.has_title:
@@ -73,6 +82,8 @@ def retagging(drawings: List[Drawing]):
             drawing.number = gen_dwg_no(unit, seq)
 
 
+# def sequence_tagging(drawings: List[Drawing], start_seq: int = 1, ):
+
 class PnID(CADDoc):
     # def __init__(self, file_path):
     #     self.app = get_application()
@@ -82,11 +93,14 @@ class PnID(CADDoc):
     #         self._post_process()
     def __init__(self, **kwargs):
         self.drawings = None
+        self.main_connectors = None
+        self.utility_connectors = None
         super().__init__(**kwargs)
 
     def init_db(self):
         super().init_db()
         self.load_drawings()
+        self.load_connectors()
 
     def load_drawings(self):
         print("Loading drawings")
@@ -122,6 +136,25 @@ class PnID(CADDoc):
                 sorted_drawings.append(drawing)
             counter += 1
         self.drawings = sorted_drawings
+
+    def load_connectors(self):
+        print("Loading connectors")
+        self.main_connectors = self.wrap_blockrefs(self.blockrefs['Connector_Main'])
+        self.utility_connectors = self.wrap_blockrefs(self.blockrefs['Connector_Utility'])
+
+    def wrap_blockrefs(self, blockrefs: List) -> List:
+        return [self.wrap_blockref(blockref) for blockref in blockrefs]
+
+    def wrap_blockref(self, blockref):
+        target = BlkRef(blockref)
+        target.drawing = self.locate(blockref)
+        return target
+
+    def locate(self, blockref) -> Union[Drawing, None]:
+        for drawing in self.drawings:
+            if Point(*blockref.InsertionPoint) in drawing:
+                return drawing
+        return None
 
     def check_connector(self):
         connectors = self.blockrefs['Connector_Main']
