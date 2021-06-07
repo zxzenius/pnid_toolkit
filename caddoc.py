@@ -10,6 +10,7 @@ from win32com.client import CastTo, Dispatch
 from win32com.client.gencache import EnsureDispatch
 
 import dxf
+from acad import BlockRef
 from point import Point
 from utils import vt_int_array, vt_variant_array, vt_point
 
@@ -69,20 +70,26 @@ def get_attributes(blockref) -> dict:
     return {attr.TagString: attr for attr in blockref.GetAttributes()}
 
 
+def get_attribute(blockref, tag: str):
+    for attr in blockref.GetAttributes():
+        if attr.TagString == tag:
+            return attr
+
+
 def get_dynamic_props(blockref) -> dict:
     return {prop.PropertyName: prop for prop in blockref.GetDynamicBlockProperties()}
 
 
-class Drawing:
+class CADDoc:
     def __init__(self, app_name='autocad', filepath=None, early_binding=True, load_data=True):
         self.early_binding = early_binding
         self.app = get_application(app=app_name, early_binding=early_binding)
         self.doc = None
-        self.blockref_db = defaultdict(list)
+        self.blockrefs = defaultdict(list)
         self.load(filepath, load_data)
 
     def init_db(self):
-        self.blockref_db = self.gen_blockref_dict()
+        self.blockrefs = self.gen_blockref_dict()
 
     def load(self, filepath=None, load_data=True):
         self.doc = get_document(self.app, filepath)
@@ -132,6 +139,7 @@ class Drawing:
             blockrefs = self.select_blockrefs()
         for blockref in blockrefs:
             db[blockref.EffectiveName].append(blockref)
+            # db[blockref.EffectiveName].append(BlockRef(blockref))
             counter += 1
 
         print(f"Indexing complete, {counter} blockrefs.")
@@ -142,7 +150,7 @@ class Drawing:
             return self.get_blockrefs_by_name(name)
 
         all_blockrefs = []
-        for blockrefs in self.blockref_db.values():
+        for blockrefs in self.blockrefs.values():
             all_blockrefs.extend(blockrefs)
         return all_blockrefs
 
@@ -164,14 +172,14 @@ class Drawing:
         return self.iter_entities(dxf.BlockRef)
 
     def get_blockrefs_by_name(self, name: str):
-        return self.blockref_db.get(name)
+        return self.blockrefs.get(name)
 
     def search_blockrefs(self, name_pattern: str) -> List:
         result = []
         prog = re.compile(name_pattern)
-        for effective_name in self.blockref_db:
+        for effective_name in self.blockrefs:
             if prog.match(effective_name):
-                result.extend(self.blockref_db[effective_name])
+                result.extend(self.blockrefs[effective_name])
 
         return result
 
@@ -233,7 +241,7 @@ class Drawing:
     def replace_block(self, old_block_name, new_block_name):
         print("Start block replacing.")
         counter = 0
-        blockrefs = self.blockref_db[old_block_name]
+        blockrefs = self.blockrefs[old_block_name]
         for old_blockref in blockrefs:
             insertion_point = Point(*old_blockref.InsertionPoint)
             new_blockref = self.doc.ModelSpace.InsertBlock(vt_point(insertion_point), new_block_name, 1, 1, 1, 0, None)
@@ -254,9 +262,21 @@ class Drawing:
         new_blockref = self.doc.ModelSpace.InsertBlock(vt_point(insertion_point), new_block_name, 1, 1, 1, 0, None)
         return new_blockref
 
+    @staticmethod
+    def get_attrs(blockref) -> dict:
+        return get_attributes(blockref)
+
+    @staticmethod
+    def get_dyn_props(blockref) -> dict:
+        return get_dynamic_props(blockref)
+
+    @staticmethod
+    def get_attr(blockref, tag: str):
+        return get_attribute(blockref, tag)
+
 
 if __name__ == "__main__":
-    dwg = Drawing()
+    dwg = CADDoc()
     # borders = dwg.get_block_refs("Border.A1")
     # border_pos = [border.InsertionPoint for border in borders]
     # print(border_pos)

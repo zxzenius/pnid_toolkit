@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 import re
+from collections import defaultdict
+from typing import List
+
 from win32com.client import CastTo, Dispatch
 from pathlib import Path
 import time
 import pprint
 import logging
 
-from drawing import Drawing
+from caddoc import CADDoc
 from entities import Line, Bubble, Valve
 from point import Point
 
@@ -16,7 +19,7 @@ log_handler = logging.StreamHandler()
 logger.addHandler(log_handler)
 
 
-def is_in_box(point, bottom_left, top_right):
+def is_in_box(point: Point, bottom_left: Point, top_right: Point) -> bool:
     """
     Return true if input point is in the rectangle defined by bottom_left & top_right
     :param point:
@@ -27,7 +30,50 @@ def is_in_box(point, bottom_left, top_right):
     return (bottom_left.x < point.x < top_right.x) and (bottom_left.y < point.y < top_right.y)
 
 
-class PnID(Drawing):
+def gen_dwg_no(unit: int, seq: int) -> str:
+    return f"{unit:02d}{seq:02d}"
+
+
+class Drawing:
+    def __init__(self, border):
+        self.border = border
+        self.title_block = None
+        min_point, max_point = border.GetBoundingBox()
+        self.min_point = Point(*min_point)
+        self.max_point = Point(*max_point)
+        self.position = Point(*border.InsertionPoint)
+        self.height = round(self.max_point.y - self.min_point.y)
+        self.width = round(self.max_point.x - self.min_point.x)
+        self.number = None
+        self.row = None
+        self.items = []
+
+    @property
+    def has_title(self) -> bool:
+        if self.title_block:
+            return True
+        return False
+
+    def __contains__(self, point: Point):
+        return is_in_box(point, self.min_point, self.max_point)
+
+
+def retagging(drawings: List[Drawing]):
+    unit = 0
+    seq = 1
+    index = None
+    for drawing in drawings:
+        if drawing.has_title:
+            if index != drawing.row:
+                seq = 1
+                unit += 1
+                index = drawing.row
+            else:
+                seq += 1
+            drawing.number = gen_dwg_no(unit, seq)
+
+
+class PnID(CADDoc):
     # def __init__(self, file_path):
     #     self.app = get_application()
     #     self.doc = get_document(self.app, file_path)
@@ -35,8 +81,52 @@ class PnID(Drawing):
     #         self._read()
     #         self._post_process()
     def __init__(self, **kwargs):
+        self.drawings = None
         super().__init__(**kwargs)
-        self.db = {}
+
+    def init_db(self):
+        super().init_db()
+        self.load_drawings()
+
+    def load_drawings(self):
+        print("Loading drawings")
+        borders = self.search_blockrefs("^Border.*")
+        title_blocks = self.search_blockrefs("^TitleBlock.*")
+        drawings = []
+        for border in borders:
+            drawing = Drawing(border)
+            drawings.append(drawing)
+            for title_block in title_blocks:
+                if Point(*title_block.InsertionPoint) in drawing:
+                    drawing.title_block = title_block
+                    title_blocks.remove(title_block)
+                    break
+
+        self.drawings = drawings
+        self.sort_drawings()
+
+    def sort_drawings(self):
+        min_height = min((h.height for h in self.drawings))
+        sorted_by_x = sorted(self.drawings, key=lambda dwg: dwg.position.x)
+        db = defaultdict(list)
+        for drawing in sorted_by_x:
+            y = drawing.position.y
+            index = round(y / min_height)
+            db[index].append(drawing)
+        counter = 1
+        sorted_drawings = []
+        for key in sorted(db.keys(), reverse=True):
+            for drawing in db[key]:
+                # row tagging
+                drawing.row = counter
+                sorted_drawings.append(drawing)
+            counter += 1
+        self.drawings = sorted_drawings
+
+    def check_connector(self):
+        connectors = self.blockrefs['Connector_Main']
+        for connector in connectors:
+            pass
 
     def _read(self):
         self.lines = []
@@ -107,15 +197,15 @@ class PnID(Drawing):
         :param block_ref:
         :return:
         """
-        dwg_number = get_attribute(block_ref, 'DWG.NO.').TextString
+        dwg_number = self.get_attr(block_ref, 'DWG.NO.').TextString
         if dwg_number:
             self.title_blocks[dwg_number] = Point(block_ref.InsertionPoint)
 
     def _read_valve(self, block_ref):
         valve = Valve()
         valve.handle = block_ref.Handle
-        valve.pos = Point(block_ref.InsertionPoint)
-        valve.tag_handle = get_attribute(block_ref, 'TAG').Handle
+        valve.pos = Point(*block_ref.InsertionPoint)
+        valve.tag_handle = self.get_attr(block_ref, 'TAG').Handle
         valve.type_name = block_ref.EffectiveName[4::]
         self.valves.append(valve)
 

@@ -4,7 +4,7 @@ from typing import List, Tuple
 from win32com.client import CastTo
 
 import constants
-from drawing import Drawing
+from caddoc import CADDoc
 from point import Point
 from utils import vt_point
 
@@ -18,20 +18,6 @@ class Selection:
     def move(self, point1: Point, point2: Point):
         for item in self.items:
             item.Move(vt_point(point1), vt_point(point2))
-
-
-def sort_borders(borders: List) -> List[List]:
-    borders_by_x = sorted(borders, key=lambda border: border.InsertionPoint[0])
-    db = dict()
-    for border in borders_by_x:
-        y = border.InsertionPoint[1]
-        index = round(y / border_height)
-        if index not in db:
-            db[index] = [border]
-        else:
-            db[index].append(border)
-    result = [db[key] for key in sorted(db.keys(), reverse=True)]
-    return result
 
 
 def sort_drawings(selections: List[Selection]) -> List[List]:
@@ -55,7 +41,7 @@ def reset_selection_sets(selection_sets):
         selection_sets.Item(index).Delete()
 
 
-def align_borders(dwg: Drawing):
+def align_borders(dwg: CADDoc):
     distance_x = 900
     distance_y = 660
     margin_y = 20
@@ -91,11 +77,11 @@ def align_borders(dwg: Drawing):
         new_y -= distance_y
 
 
-def format_pipe_tag(dwg: Drawing):
+def format_pipe_tag(dwg: CADDoc):
     pass
 
 
 if __name__ == "__main__":
-    drawing = Drawing()
+    drawing = CADDoc()
     drawing.replace_text(r'(.*B\d{1}SRF\d{1})(\(.*\))', r'\g<1>')
     drawing.replace_block("TAG_NUMBER", "pipe_tag")

@@ -1,4 +1,4 @@
-from drawing import Drawing
+from caddoc import CADDoc
 import time
 
 # A performance test for indexing blockref by traverse VS by selection
@@ -11,7 +11,7 @@ import time
 # Indexing complete.
 # 2736 collected by select, cost 9.911434888839722 s
 if __name__ == "__main__":
-    drawing = Drawing()
+    drawing = CADDoc()
     methods = {
         "brute force": True,
         "select": False
