@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
-import re
 from collections import defaultdict
 from typing import List, Union
 
-from win32com.client import CastTo, Dispatch
-from pathlib import Path
+from win32com.client import CastTo
 import time
 import pprint
 import logging
 
-from acad.blkref import BlkRef
 from caddoc import CADDoc
+from connector import MainConnector
+from drawing import Drawing
 from entities import Line, Bubble, Valve
 from point import Point
+from utils import is_in_box
 
 logger = logging.getLogger('pnid')
 logger.setLevel(logging.INFO)
@@ -22,49 +22,8 @@ logger.addHandler(log_handler)
 DWG_NO_SUFFIX = ""
 
 
-def is_in_box(point: Point, bottom_left: Point, top_right: Point) -> bool:
-    """
-    Return true if input point is in the rectangle defined by bottom_left & top_right
-    :param point:
-    :param bottom_left:
-    :param top_right:
-    :return: boolean
-    """
-    return (bottom_left.x < point.x < top_right.x) and (bottom_left.y < point.y < top_right.y)
-
-
 def gen_dwg_no(unit: int, seq: int) -> str:
     return f"{unit:02d}{seq:02d}"
-
-
-class Drawing:
-    def __init__(self, border):
-        self.border = border
-        self.title_block = None
-        min_point, max_point = border.GetBoundingBox()
-        self.min_point = Point(*min_point)
-        self.max_point = Point(*max_point)
-        self.position = Point(*border.InsertionPoint)
-        self.height = round(self.max_point.y - self.min_point.y)
-        self.width = round(self.max_point.x - self.min_point.x)
-        self.number = None
-        self.row = None
-        self.items = []
-
-    @property
-    def has_title(self) -> bool:
-        if self.title_block:
-            return True
-        return False
-
-    def __contains__(self, point: Point):
-        return is_in_box(point, self.min_point, self.max_point)
-
-    def __repr__(self):
-        return f"<Drawing '{self.number}'>"
-
-    def __str__(self):
-        return str(self.number)
 
 
 def tagging_with_unit(drawings: List[Drawing], start_unit: int = 1, start_seq: int = 1):
@@ -140,13 +99,13 @@ class PnID(CADDoc):
     def load_connectors(self):
         print("Loading connectors")
         self.main_connectors = self.wrap_blockrefs(self.blockrefs['Connector_Main'])
-        self.utility_connectors = self.wrap_blockrefs(self.blockrefs['Connector_Utility'])
+        # self.utility_connectors = self.wrap_blockrefs(self.blockrefs['Connector_Utility'])
 
     def wrap_blockrefs(self, blockrefs: List) -> List:
         return [self.wrap_blockref(blockref) for blockref in blockrefs]
 
     def wrap_blockref(self, blockref):
-        target = BlkRef(blockref)
+        target = MainConnector(blockref)
         target.drawing = self.locate(blockref)
         return target
 
@@ -157,8 +116,7 @@ class PnID(CADDoc):
         return None
 
     def check_connector(self):
-        connectors = self.blockrefs['Connector_Main']
-        for connector in connectors:
+        for connector in self.main_connectors:
             pass
 
     def _read(self):
