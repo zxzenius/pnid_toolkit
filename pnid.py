@@ -38,7 +38,7 @@ def tagging_with_unit(drawings: List[Drawing], start_unit: int = 1, start_seq: i
                 index = drawing.row
             else:
                 seq += 1
-            drawing.number = gen_dwg_no(unit, seq)
+            drawing._number = gen_dwg_no(unit, seq)
 
 
 # def sequence_tagging(drawings: List[Drawing], start_seq: int = 1, ):

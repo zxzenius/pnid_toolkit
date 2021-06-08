@@ -41,7 +41,7 @@ for valve in pnid.valves:
     valves[dwg_number][valve.type_name].append(valve)
     if type_code := get_type_code(valve.type_name):
         valve.v_type = type_code
-        valve.number = f'{dwg_number}{len(valves[dwg_number][valve.type_name]):02d}'
+        valve._number = f'{dwg_number}{len(valves[dwg_number][valve.type_name]):02d}'
         # tagging, exclude legends
         if int(dwg_number) > 99:
             tag_handle = pnid.doc.HandleToObject(valve.tag_handle)

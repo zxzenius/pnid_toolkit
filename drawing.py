@@ -5,20 +5,20 @@ from point import Point
 class Drawing:
     def __init__(self, border):
         self.border = border
-        self.title_block = None
+        self._title_block = None
         min_point, max_point = border.GetBoundingBox()
         self.min_point = Point(*min_point)
         self.max_point = Point(*max_point)
         self.position = Point(*border.InsertionPoint)
         self.height = round(self.max_point.y - self.min_point.y)
         self.width = round(self.max_point.x - self.min_point.x)
-        self.number = None
+        self._number = None
         self.row = None
         self.items = []
 
     @property
     def has_title(self) -> bool:
-        if self.title_block:
+        if self._title_block:
             return True
         return False
 
@@ -26,7 +26,23 @@ class Drawing:
         return is_in_box(point, self.min_point, self.max_point)
 
     def __repr__(self):
-        return f"<Drawing '{self.number}'>"
+        return f"<Drawing '{self._number}'>"
 
     def __str__(self):
-        return str(self.number)
+        return str(self._number)
+
+    @property
+    def title_block(self):
+        return self._title_block
+
+    @title_block.setter
+    def title_block(self, blockref):
+        self._title_block = blockref
+
+    @property
+    def number(self):
+        return self.number
+
+    @number.setter
+    def number(self, value):
+        self._number = value
