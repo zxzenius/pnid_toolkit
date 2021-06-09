@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from collections import defaultdict
-from typing import List, Union
+from typing import List, Union, Optional
 
 from win32com.client import CastTo
 import time
@@ -52,7 +52,7 @@ class PnID(CADDoc):
     #         self._post_process()
     def __init__(self, **kwargs):
         self.drawings = None
-        self.main_connectors = None
+        self.main_connectors: Optional[List[MainConnector]] = None
         self.utility_connectors = None
         super().__init__(**kwargs)
 
@@ -114,10 +114,6 @@ class PnID(CADDoc):
             if Point(*blockref.InsertionPoint) in drawing:
                 return drawing
         return None
-
-    def check_connector(self):
-        for connector in self.main_connectors:
-            pass
 
     def _read(self):
         self.lines = []

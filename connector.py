@@ -19,30 +19,33 @@ class Element:
 
 
 class Connector(Element):
+    cls_name = "Conn"
+
     @property
     def number(self) -> str:
         return self.attrs["tag"]
 
+    def __repr__(self):
+        return f"<{self.cls_name} '{self.handle}'>"
+
 
 class UtilityConnector(Connector):
-    def __repr__(self):
-        return f"<UtyConn '{self.number}'>"
+    cls_name = "UtyConn"
 
 
 class MainConnector(Connector):
-    def __repr__(self):
-        return f"<MainConn '{self.number}'>"
+    cls_name = "MainConn"
 
     @property
-    def is_facing_in(self) -> bool:
+    def is_entering(self) -> bool:
         left_x = self.drawing.min_point.x
         right_x = self.drawing.max_point.x
         mid_x = (left_x + right_x) / 2
         return (left_x < self.location.x < mid_x) & (not self.props["flip"])
 
     @property
-    def is_facing_out(self) -> bool:
-        return not self.is_facing_in
+    def is_exiting(self) -> bool:
+        return not self.is_entering
 
     @property
     def route(self) -> str:
@@ -70,3 +73,6 @@ class MainConnector(Connector):
     def is_off_boundary(self) -> bool:
         return not self.is_off_drawing
 
+    @property
+    def link_drawing(self) -> str:
+        return self.attrs["pid.no"]

@@ -41,7 +41,7 @@ class Drawing:
 
     @property
     def number(self):
-        return self.number
+        return self._number
 
     @number.setter
     def number(self, value):
