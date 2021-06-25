@@ -69,7 +69,7 @@ class PnID(CADDoc):
         for border in borders:
             drawing = Drawing(border)
             drawings.append(drawing)
-            for title_block in title_blocks:
+            for title_block in title_blocks[:]:
                 if Point(*title_block.InsertionPoint) in drawing:
                     drawing.title_block = title_block
                     title_blocks.remove(title_block)
@@ -294,32 +294,7 @@ def gen_bones(items, keyword_attribute):
 
 
 if __name__ == '__main__':
-    # line = Line('NG01010-50-B2SRF1-H')
-    # print(line)
-    pp = pprint.PrettyPrinter()
-    start_time = time.time()
-    pnid = PnID(r'D:\Work\Project\XY2019P02-KAYAN.25MMSCFD.LNG\PnID\IFC\KAYAN.LNG.TRAIN.ColdBox.PnID_2020.0605.dwg')
-    end_time = time.time()
-    time_spent = end_time - start_time
-    print('Time spent: %.2fs' % time_spent)
-
-    # logger.info('%s Pipes, %s Instruments' % (len(pnid.lines), len(pnid.bubbles)))
-    # testing renumber 5 -> 4
-    # pipe_bones = gen_bones(pnid.lines, 'service')
-    # inst_bones = gen_bones(pnid.bubbles, 'loop_letter')
-    # pp.pprint(pipe_bones)
-    # pp.pprint(inst_bones)
-    # generate mapping
-    # for pipe in pnid.lines:
-    #     new_name = '%s%02d%02d' % (pipe.service, int(pipe.unit), pipe_bones[pipe.unit][pipe.service].index(pipe.sequence)+1)
-    #     print('%s -> %s' % (pipe.name, new_name))
-
-    # print({inst.function for inst in pnid.instruments})
-    # gen loops
-    # print(gen_loops(pnid.instruments))
-    # pp.pprint(pnid.borders)
-    # pp.pprint(pnid.title_blocks)
-    # pp.pprint(pnid.locate_dwg_no(Point((298, -3590, 0))))
-    # pp.pprint(pnid.dwg_map)
-    # pp.pprint(pnid.valves)
-    print(f'Acad.app.version: {pnid.app.version}')
+    pid = PnID()
+    # end_time = time.time()
+    # time_spent = end_time - start_time
+    # print('Time spent: %.2fs' % time_spent)

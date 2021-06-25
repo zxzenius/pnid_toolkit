@@ -10,9 +10,8 @@ from win32com.client import CastTo, Dispatch
 from win32com.client.gencache import EnsureDispatch
 
 import dxf
-from acad import BlkRef
 from point import Point
-from utils import vt_int_array, vt_variant_array, vt_point
+from utils import vt_int_array, vt_variant_array, vt_point, get_attributes, get_attribute, get_dynamic_props
 
 
 def get_application(app='AutoCAD', version='', early_binding=True, visible=True):
@@ -57,27 +56,6 @@ def get_document(app, filename=None):
             return document
 
     return app.Documents.Open(filename)
-
-
-def get_attributes(blockref) -> dict:
-    """
-    Wrapper of Block.GetAttributes
-    Usage: attrs = get_attributes(blockRef)
-           attrs['TAG'].TextString = 'hello'
-    :param blockref: BlockReference
-    :return Dict contends AcadAttributeReference objects
-    """
-    return {attr.TagString: attr for attr in blockref.GetAttributes()}
-
-
-def get_attribute(blockref, tag: str):
-    for attr in blockref.GetAttributes():
-        if attr.TagString == tag:
-            return attr
-
-
-def get_dynamic_props(blockref) -> dict:
-    return {prop.PropertyName: prop for prop in blockref.GetDynamicBlockProperties()}
 
 
 class CADDoc:

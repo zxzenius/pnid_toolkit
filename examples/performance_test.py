@@ -11,10 +11,10 @@ import time
 # Indexing complete.
 # 2736 collected by select, cost 9.911434888839722 s
 if __name__ == "__main__":
-    drawing = CADDoc()
+    drawing = CADDoc(load_data=False)
     methods = {
-        "brute force": True,
-        "select": False
+        "brute force": False,
+        "select": True
     }
     for method in methods:
         start_time = time.time()

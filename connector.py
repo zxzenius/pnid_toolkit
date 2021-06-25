@@ -41,7 +41,7 @@ class MainConnector(Connector):
         left_x = self.drawing.min_point.x
         right_x = self.drawing.max_point.x
         mid_x = (left_x + right_x) / 2
-        return (left_x < self.location.x < mid_x) & (not self.props["flip"])
+        return (left_x < self.location.x < mid_x) == (not self.props["flip"])
 
     @property
     def is_exiting(self) -> bool:

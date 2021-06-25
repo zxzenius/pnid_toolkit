@@ -35,3 +35,30 @@ def is_in_box(point: Point, bottom_left: Point, top_right: Point) -> bool:
     :return: boolean
     """
     return (bottom_left.x < point.x < top_right.x) and (bottom_left.y < point.y < top_right.y)
+
+
+def get_attributes(blockref) -> dict:
+    """
+    Wrapper of Block.GetAttributes
+    Usage: attrs = get_attributes(blockRef)
+           attrs['TAG'].TextString = 'hello'
+    :param blockref: BlockReference
+    :return Dict contends AcadAttributeReference objects
+    """
+    return {attr.TagString: attr for attr in blockref.GetAttributes()}
+
+
+def get_attribute(blockref, tag: str):
+    for attr in blockref.GetAttributes():
+        if attr.TagString == tag:
+            return attr
+
+
+def get_dynamic_props(blockref) -> dict:
+    return {prop.PropertyName: prop for prop in blockref.GetDynamicBlockProperties()}
+
+
+def get_dynamic_prop(blockref, prop_name: str):
+    for prop in blockref.GetDynamicBlockProperties():
+        if prop.PropertyName == prop_name:
+            return prop
