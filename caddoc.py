@@ -235,9 +235,32 @@ class CADDoc:
 
         print(f"Replaced {counter} blockrefs.")
 
-    def replace_blockref(self, old_blockref, new_block_name):
-        insertion_point = Point(*old_blockref.InsertionPoint)
-        new_blockref = self.doc.ModelSpace.InsertBlock(vt_point(insertion_point), new_block_name, 1, 1, 1, 0, None)
+    def replace_with_block(self, blockref, new_block_name):
+        location = Point(*blockref.InsertionPoint)
+        new_blockref = self.doc.ModelSpace.InsertBlock(
+            vt_point(location),
+            new_block_name,
+            blockref.XScaleFactor,
+            blockref.YScaleFactor,
+            blockref.ZScaleFactor,
+            blockref.Rotation,
+            None)
+        new_blockref.Layer = blockref.Layer
+        old_attrs = self.get_attrs(blockref)
+        new_attrs = self.get_attrs(new_blockref)
+        for tag in new_attrs:
+            if tag in old_attrs:
+                new_attrs[tag].TextString = old_attrs[tag].TextString
+                new_attrs[tag].Alignment = old_attrs[tag].Alignment
+                new_attrs[tag].Height = old_attrs[tag].Height
+                new_attrs[tag].Layer = old_attrs[tag].Layer
+                new_attrs[tag].Rotation = old_attrs[tag].Rotation
+                new_attrs[tag].ScaleFactor = old_attrs[tag].ScaleFactor
+                new_attrs[tag].StyleName = old_attrs[tag].StyleName
+                new_attrs[tag].UpsideDown = old_attrs[tag].UpsideDown
+                new_attrs[tag].Visible = old_attrs[tag].Visible
+                new_attrs[tag].InsertionPoint = vt_point(Point(*old_attrs[tag].InsertionPoint))
+        blockref.Delete()
         return new_blockref
 
     @staticmethod
