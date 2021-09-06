@@ -1,6 +1,6 @@
 import re
 from collections import defaultdict
-from typing import List, Iterator
+from typing import List, Iterator, Iterable, Set
 from uuid import uuid4
 
 import constants
@@ -11,7 +11,8 @@ from win32com.client.gencache import EnsureDispatch
 
 import dxf
 from point import Point
-from utils import vt_int_array, vt_variant_array, vt_point, get_attributes, get_attribute, get_dynamic_props
+from utils import vt_int_array, vt_variant_array, vt_point, get_attributes, get_attribute, get_dynamic_props, \
+    copy_attrs, copy_dyn_props, get_dynamic_prop
 
 
 def get_application(app='AutoCAD', version='', early_binding=True, visible=True):
@@ -59,7 +60,7 @@ def get_document(app, filename=None):
 
 
 class CADDoc:
-    def __init__(self, app_name='autocad', filepath=None, early_binding=True, load_data=True):
+    def __init__(self, *, app_name='autocad', filepath=None, early_binding=False, load_data=True):
         self.early_binding = early_binding
         self.app = get_application(app=app_name, early_binding=early_binding)
         self.doc = None
@@ -171,6 +172,17 @@ class CADDoc:
         entities = self._select_by_type(dxf_entity.type_name)
         return [CastTo(entity, dxf_entity.interface) for entity in entities]
 
+    def select_multi_entities(self, dxf_entities: Iterable[dxf.Entity]) -> List:
+        selection = []
+        for dxf_entity in set(dxf_entities):
+            entities = self._select_by_type(dxf_entity.type_name)
+            selection.extend([CastTo(entity, dxf_entity.interface) for entity in entities])
+
+        return selection
+
+    def select_all_drawing_objects(self) -> List:
+        return self.select_multi_entities(dxf.AllDrawingObjects)
+
     def get_block(self, name: str):
         for block in self.doc.Blocks:
             if block.Name == name:
@@ -216,26 +228,21 @@ class CADDoc:
 
         print(f'Replaced {counter} texts.')
 
-    def replace_block(self, old_block_name, new_block_name):
+    def replace_block(self, from_block_name, to_block_name):
+        self.replace_blockrefs(self.blockrefs[from_block_name], to_block_name)
+
+    def replace_blockrefs(self, blockrefs, new_block_name):
+        if not self.has_block(new_block_name):
+            raise ValueError(f"There is no block named '{new_block_name}'")
         print("Start block replacing.")
         counter = 0
-        blockrefs = self.blockrefs[old_block_name]
-        for old_blockref in blockrefs:
-            insertion_point = Point(*old_blockref.InsertionPoint)
-            new_blockref = self.doc.ModelSpace.InsertBlock(vt_point(insertion_point), new_block_name, 1, 1, 1, 0, None)
-            new_blockref.Rotation = old_blockref.Rotation
-            new_blockref.Layer = old_blockref.Layer
-            old_attributes = get_attributes(old_blockref)
-            new_attributes = get_attributes(new_blockref)
-            for tag in new_attributes:
-                if tag in old_attributes:
-                    new_attributes[tag].TextString = old_attributes[tag].TextString # noqa
-            old_blockref.Delete()
+        for blockref in blockrefs:
+            self.replace_blockref(blockref, new_block_name)
             counter += 1
 
         print(f"Replaced {counter} blockrefs.")
 
-    def replace_with_block(self, blockref, new_block_name):
+    def replace_blockref(self, blockref, new_block_name):
         location = Point(*blockref.InsertionPoint)
         new_blockref = self.doc.ModelSpace.InsertBlock(
             vt_point(location),
@@ -246,46 +253,17 @@ class CADDoc:
             blockref.Rotation,
             None)
         new_blockref.Layer = blockref.Layer
-        old_attrs = self.get_attrs(blockref)
-        new_attrs = self.get_attrs(new_blockref)
-        for tag in new_attrs:
-            if tag in old_attrs:
-                new_attrs[tag].TextString = old_attrs[tag].TextString
-                new_attrs[tag].Alignment = old_attrs[tag].Alignment
-                new_attrs[tag].Height = old_attrs[tag].Height
-                new_attrs[tag].Layer = old_attrs[tag].Layer
-                new_attrs[tag].Rotation = old_attrs[tag].Rotation
-                new_attrs[tag].ScaleFactor = old_attrs[tag].ScaleFactor
-                new_attrs[tag].StyleName = old_attrs[tag].StyleName
-                new_attrs[tag].UpsideDown = old_attrs[tag].UpsideDown
-                new_attrs[tag].Visible = old_attrs[tag].Visible
-                new_attrs[tag].InsertionPoint = vt_point(Point(*old_attrs[tag].InsertionPoint))
+        copy_attrs(blockref, new_blockref)
+        if new_blockref.IsDynamicBlock and blockref.IsDynamicBlock:
+            copy_dyn_props(blockref, new_blockref)
+        self.blockrefs[new_block_name].append(new_blockref)
+        self.blockrefs[blockref.EffectiveName].remove(blockref)
         blockref.Delete()
         return new_blockref
 
-    @staticmethod
-    def get_attrs(blockref) -> dict:
-        return get_attributes(blockref)
+    def has_block(self, name):
+        for block in self.doc.Blocks:
+            if block.Name == name:
+                return True
 
-    @staticmethod
-    def get_dyn_props(blockref) -> dict:
-        return get_dynamic_props(blockref)
-
-    @staticmethod
-    def get_attr(blockref, tag: str):
-        return get_attribute(blockref, tag)
-
-
-if __name__ == "__main__":
-    dwg = CADDoc()
-    # borders = dwg.get_block_refs("Border.A1")
-    # border_pos = [border.InsertionPoint for border in borders]
-    # print(border_pos)
-    # print(dwg.get_block("TAG_NUMBER"))
-    # blocks = dwg.walk_blocks(True)
-    # print(len(dwg.block_ref_dict.get("VAL_RELIEF")))
-    # print(len(dwg.find_block_refs(r"VAL_.*")))
-    # print(len(dwg.get_block_refs()))
-    # print(len(dwg.select_by_type("INSERT")))
-    # print(len(dwg.get_block_refs("Border*")))
-    dwg.replace_block("TAG_NUMBER", "pipe_tag")
+        return False
