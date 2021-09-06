@@ -13,6 +13,7 @@ class Element:
         self.props = extract_dynamic_properties(blockref)
         self.location = Point(*blockref.InsertionPoint)
         self.drawing: Optional[Drawing] = None
+        self.ref = blockref
 
     def __repr__(self):
         return f"<Element '{self.name}'>"
@@ -24,6 +25,10 @@ class Connector(Element):
     @property
     def number(self) -> str:
         return self.attrs["tag"]
+
+    @property
+    def link_drawing(self) -> str:
+        return self.attrs["pid.no"]
 
     def __repr__(self):
         return f"<{self.cls_name} '{self.handle}'>"
@@ -72,7 +77,3 @@ class MainConnector(Connector):
     @property
     def is_off_boundary(self) -> bool:
         return not self.is_off_drawing
-
-    @property
-    def link_drawing(self) -> str:
-        return self.attrs["pid.no"]
