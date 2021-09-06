@@ -29,7 +29,7 @@ class Drawing:
         return is_in_box(point, self.min_point, self.max_point)
 
     def __repr__(self):
-        return f"<Drawing '{self._number}'>"
+        return f"<Drawing '{self.tag}'>"
 
     def __str__(self):
         return str(self._number)
@@ -44,15 +44,20 @@ class Drawing:
         self._attrs = get_attributes(blockref)
 
     @property
-    def full_number(self) -> Union[None, str]:
+    def id(self) -> Union[None, str]:
         if not self.title_block:
             return None
         return self._attrs["DWG.NO."].TextString
 
-    @full_number.setter
-    def full_number(self, value: str):
+    @id.setter
+    def id(self, value: str):
         if self.title_block:
             self._attrs["DWG.NO."].TextString = value
+
+    @property
+    def tag(self):
+        if self.id:
+            return self.id[-4:]
 
     @property
     def number(self):
