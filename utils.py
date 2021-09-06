@@ -62,3 +62,40 @@ def get_dynamic_prop(blockref, prop_name: str):
     for prop in blockref.GetDynamicBlockProperties():
         if prop.PropertyName == prop_name:
             return prop
+
+
+def copy_attrs(source_bref, target_bref):
+    """
+    Copy attrs from source_block_ref to target_blockref
+    :param source_bref:
+    :param target_bref:
+    :return:
+    """
+    old_attrs = get_attributes(source_bref)
+    new_attrs = get_attributes(target_bref)
+    for tag in new_attrs:
+        if tag in old_attrs:
+            new_attrs[tag].TextString = old_attrs[tag].TextString
+            new_attrs[tag].Alignment = old_attrs[tag].Alignment
+            new_attrs[tag].Height = old_attrs[tag].Height
+            new_attrs[tag].Layer = old_attrs[tag].Layer
+            new_attrs[tag].Rotation = old_attrs[tag].Rotation
+            new_attrs[tag].ScaleFactor = old_attrs[tag].ScaleFactor
+            new_attrs[tag].StyleName = old_attrs[tag].StyleName
+            new_attrs[tag].UpsideDown = old_attrs[tag].UpsideDown
+            new_attrs[tag].Visible = old_attrs[tag].Visible
+            new_attrs[tag].InsertionPoint = vt_point(Point(*old_attrs[tag].InsertionPoint))
+
+
+def copy_dyn_props(source_bref, target_bref):
+    """
+    Copy dynamic props from source blockref to target blockref
+    :param source_bref:
+    :param target_bref:
+    :return:
+    """
+    old_props = get_dynamic_props(source_bref)
+    new_props = get_dynamic_props(target_bref)
+    for name in new_props:
+        if name in old_props:
+            new_props[name].Value = old_props[name].Value
