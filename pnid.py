@@ -8,7 +8,7 @@ import pprint
 import logging
 
 from caddoc import CADDoc
-from connector import MainConnector
+from connector import MainConnector, UtilityConnector
 from drawing import Drawing
 from entities import Line, Bubble, Valve
 from point import Point
@@ -98,14 +98,17 @@ class PnID(CADDoc):
 
     def load_connectors(self):
         print("Loading connectors")
-        self.main_connectors = self.wrap_blockrefs(self.blockrefs['Connector_Main'])
+        self.main_connectors = self.wrap_blockrefs(self.blockrefs['Connector_Main'], MainConnector)
+        print(f"{len(self.main_connectors)} main connectors.")
+        self.utility_connectors = self.wrap_blockrefs(self.blockrefs['Connector_Utility'], UtilityConnector)
+        print(f"{len(self.utility_connectors)} utility connectors.")
         # self.utility_connectors = self.wrap_blockrefs(self.blockrefs['Connector_Utility'])
 
-    def wrap_blockrefs(self, blockrefs: List) -> List:
-        return [self.wrap_blockref(blockref) for blockref in blockrefs]
+    def wrap_blockrefs(self, blockrefs: List, wrapper) -> List:
+        return [self.wrap_blockref(blockref, wrapper) for blockref in blockrefs]
 
-    def wrap_blockref(self, blockref):
-        target = MainConnector(blockref)
+    def wrap_blockref(self, blockref, wrapper):
+        target = wrapper(blockref)
         target.drawing = self.locate(blockref)
         return target
 
