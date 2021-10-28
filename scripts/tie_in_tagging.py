@@ -17,7 +17,7 @@ def tagging(pnid: PnID):
 
     for number in sorted(tpoints_by_drawing):
 
-        if number > 1:
+        if number > 10:
             tpoints = tpoints_by_drawing[number]
             sorted_by_y = sorted(tpoints, key=lambda tp: -Point(*tp.InsertionPoint).y)
             sorted_by_x = sorted(sorted_by_y, key=lambda tp: Point(*tp.InsertionPoint).x)
