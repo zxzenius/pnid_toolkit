@@ -11,8 +11,8 @@ from win32com.client.gencache import EnsureDispatch
 
 import dxf
 from point import Point
-from utils import vt_int_array, vt_variant_array, vt_point, get_attributes, get_attribute, get_dynamic_props, \
-    copy_attrs, copy_dyn_props, get_dynamic_prop
+from utils import vt_int_array, vt_variant_array, vt_point, get_attributes, get_attribute, get_dynamic_properties, \
+    copy_attributes, copy_dynamic_properties, get_dynamic_property
 
 
 def get_application(app='AutoCAD', version='', early_binding=True, visible=True):
@@ -236,7 +236,7 @@ class CADDoc:
             raise ValueError(f"There is no block named '{new_block_name}'")
         print("Start block replacing.")
         counter = 0
-        for blockref in blockrefs:
+        for blockref in blockrefs[:]:
             self.replace_blockref(blockref, new_block_name)
             counter += 1
 
@@ -253,9 +253,9 @@ class CADDoc:
             blockref.Rotation,
             None)
         new_blockref.Layer = blockref.Layer
-        copy_attrs(blockref, new_blockref)
+        copy_attributes(blockref, new_blockref)
         if new_blockref.IsDynamicBlock and blockref.IsDynamicBlock:
-            copy_dyn_props(blockref, new_blockref)
+            copy_dynamic_properties(blockref, new_blockref)
         self.blockrefs[new_block_name].append(new_blockref)
         self.blockrefs[blockref.EffectiveName].remove(blockref)
         blockref.Delete()
