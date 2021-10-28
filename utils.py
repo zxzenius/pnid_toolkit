@@ -54,17 +54,17 @@ def get_attribute(blockref, tag: str):
             return attr
 
 
-def get_dynamic_props(blockref) -> dict:
+def get_dynamic_properties(blockref) -> dict:
     return {prop.PropertyName: prop for prop in blockref.GetDynamicBlockProperties()}
 
 
-def get_dynamic_prop(blockref, prop_name: str):
+def get_dynamic_property(blockref, prop_name: str):
     for prop in blockref.GetDynamicBlockProperties():
         if prop.PropertyName == prop_name:
             return prop
 
 
-def copy_attrs(source_bref, target_bref):
+def copy_attributes(source_bref, target_bref):
     """
     Copy attrs from source_block_ref to target_blockref
     :param source_bref:
@@ -87,15 +87,15 @@ def copy_attrs(source_bref, target_bref):
             new_attrs[tag].InsertionPoint = vt_point(Point(*old_attrs[tag].InsertionPoint))
 
 
-def copy_dyn_props(source_bref, target_bref):
+def copy_dynamic_properties(source_bref, target_bref):
     """
     Copy dynamic props from source blockref to target blockref
     :param source_bref:
     :param target_bref:
     :return:
     """
-    old_props = get_dynamic_props(source_bref)
-    new_props = get_dynamic_props(target_bref)
+    old_props = get_dynamic_properties(source_bref)
+    new_props = get_dynamic_properties(target_bref)
     for name in new_props:
         if name in old_props:
             new_props[name].Value = old_props[name].Value

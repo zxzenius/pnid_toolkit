@@ -7,15 +7,15 @@ def problem_line(conn: Connector, problem: str) -> dict:
     return {
         "problem": problem,
         "target": conn.handle,
-        "number": conn.number,
+        "number": conn.tag,
         "drawing": get_dwg_num(conn),
-        "location": (round(conn.location.x, 2), round(conn.location.y, 2))
+        "location": (round(conn.position.x, 2), round(conn.position.y, 2))
     }
 
 
 def number_matched(conn: Connector) -> bool:
     # return conn.number[:-2] == conn.drawing.number[1:]
-    return int(conn.number[:-2]) == int(get_dwg_num(conn))
+    return int(conn.tag[:-2]) == int(get_dwg_num(conn))
 
 
 def is_excluded(conn: Connector) -> bool:
@@ -41,7 +41,7 @@ def check_main(p: PnID) -> list:
     for connector in connectors:
         if is_excluded(connector):
             continue
-        if not connector.number:
+        if not connector.tag:
             problems.append(problem_line(connector, "Missing number"))
         elif not (connector.is_to | connector.is_from):
             problems.append(problem_line(connector, "Missing route"))
@@ -61,7 +61,7 @@ def check_main(p: PnID) -> list:
 
 def check_basic(connector: Connector) -> list:
     problems = []
-    if not connector.number:
+    if not connector.tag:
         problems.append(problem_line(connector, "Missing tag number"))
 
     print(f"{len(problems)} problems detected:")
@@ -73,7 +73,7 @@ def check_utility(p: PnID) -> list:
     for connector in p.utility_connectors:
         if is_excluded(connector):
             continue
-        if not connector.number:
+        if not connector.tag:
             problems.append(problem_line(connector, "Missing number"))
 
     return problems
