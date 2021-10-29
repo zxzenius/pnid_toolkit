@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 from collections import defaultdict
 from typing import List, Union, Optional
 
 from win32com.client import CastTo
 import time
-import pprint
 import logging
 
 from caddoc import CADDoc
@@ -12,12 +10,7 @@ from connector import MainConnector, UtilityConnector
 from drawing import Drawing
 from entities import Line, Bubble, Valve
 from point import Point
-from utils import is_in_box
-
-logger = logging.getLogger('pnid')
-logger.setLevel(logging.INFO)
-log_handler = logging.StreamHandler()
-logger.addHandler(log_handler)
+from utils import is_in_box, get_attribute
 
 DWG_NO_SUFFIX = ""
 
@@ -41,28 +34,22 @@ def tagging_with_unit(drawings: List[Drawing], start_unit: int = 1, start_seq: i
             drawing._number = gen_dwg_no(unit, seq)
 
 
-# def sequence_tagging(drawings: List[Drawing], start_seq: int = 1, ):
-
 class PnID(CADDoc):
-    # def __init__(self, file_path):
-    #     self.app = get_application()
-    #     self.doc = get_document(self.app, file_path)
-    #     if self.doc:
-    #         self._read()
-    #         self._post_process()
-    def __init__(self, **kwargs):
+    def __init__(self, filepath: str = None):
+        self.logger = logging.getLogger(__name__)
         self.drawings = None
         self.main_connectors: Optional[List[MainConnector]] = None
         self.utility_connectors = None
-        super().__init__(**kwargs)
+        super().__init__(filepath=filepath)
 
     def init_db(self):
         super().init_db()
         self.load_drawings()
         self.load_connectors()
+        # self.load_bubbles()
 
     def load_drawings(self):
-        print("Loading drawings")
+        self.logger.info("Loading drawings")
         borders = self.search_blockrefs("^Border.*")
         title_blocks = self.search_blockrefs("^TitleBlock.*")
         drawings = []
@@ -103,6 +90,14 @@ class PnID(CADDoc):
         self.utility_connectors = self.wrap_blockrefs(self.blockrefs['Connector_Utility'], UtilityConnector)
         print(f"{len(self.utility_connectors)} utility connectors.")
         # self.utility_connectors = self.wrap_blockrefs(self.blockrefs['Connector_Utility'])
+
+    def load_local_bubbles(self):
+        self.logger.info('Loading bubbles')
+        for bubble in self.search_blockrefs(r'\w*_LOCAL$'):
+            code = get_attribute(bubble, 'FUNCTION')
+            number = get_attribute(bubble, 'TAG')
+            id = f'{code}-{number}'
+
 
     def wrap_blockrefs(self, blockrefs: List, wrapper) -> List:
         return [self.wrap_blockref(blockref, wrapper) for blockref in blockrefs]
