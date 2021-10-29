@@ -1,50 +1,31 @@
 import re
 from collections import defaultdict
-from typing import List, Iterator, Iterable, Set
+from pathlib import Path
+from typing import List, Iterator, Iterable
 from uuid import uuid4
 
+from win32com.client import CastTo
+
 import constants
-from pathlib import Path
-
-from win32com.client import CastTo, Dispatch
-from win32com.client.gencache import EnsureDispatch
-
 import dxf
 from point import Point
-from utils import vt_int_array, vt_variant_array, vt_point, get_attributes, get_attribute, get_dynamic_properties, \
-    copy_attributes, copy_dynamic_properties, get_dynamic_property
+from utils import vt_int_array, vt_variant_array, vt_point, copy_attributes, copy_dynamic_properties, get_application
 
 
-def get_application(app='AutoCAD', version='', early_binding=True, visible=True):
+def get_acad_app(version=''):
     """
     AutoCAD Application COM Object
-    Also work for BricsCAD
-    :param early_binding:
-    :param app:
-        app name of 'AutoCAD' or 'BricsCAD', case insensitive
-        default is 'AutoCAD'
     :param version:
         default is latest version
         '16' for version 2006
-    :param visible:
-        default is True
     :return:
         AutoCAD Application Object
     """
-    if app.lower() == 'autocad':
-        prog_id = 'AutoCAD.Application'
-    elif app.lower() == 'bricscad':
-        prog_id = 'BricscadApp.AcadApplication'
-    else:
-        raise ValueError('app should be "AutoCAD" or "Bricscad"')
+    prog_id = 'AutoCAD.Application'
     if version:
         prog_id = '.'.join((prog_id, version))
-    if early_binding:
-        app = EnsureDispatch(prog_id)
-    else:
-        app = Dispatch(prog_id)
-    app.Visible = visible
-    return app
+
+    return get_application(prog_id)
 
 
 def get_document(app, filename=None):
@@ -60,9 +41,8 @@ def get_document(app, filename=None):
 
 
 class CADDoc:
-    def __init__(self, *, app_name='autocad', filepath=None, early_binding=False, load_data=True):
-        self.early_binding = early_binding
-        self.app = get_application(app=app_name, early_binding=early_binding)
+    def __init__(self, *, filepath=None, load_data=True):
+        self.app = get_acad_app()
         self.doc = None
         self.blockrefs = defaultdict(list)
         self.load(filepath, load_data)
