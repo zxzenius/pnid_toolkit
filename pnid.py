@@ -36,7 +36,7 @@ def tagging_with_unit(drawings: List[Drawing], start_unit: int = 1, start_seq: i
 
 class PnID(CADDoc):
     def __init__(self, filepath: str = None):
-        self.logger = logging.getLogger(__name__)
+        # self.logger = logging.getLogger(__name__)
         self.drawings = None
         self.main_connectors: Optional[List[MainConnector]] = None
         self.utility_connectors = None
@@ -49,7 +49,7 @@ class PnID(CADDoc):
         # self.load_bubbles()
 
     def load_drawings(self):
-        self.logger.info("Loading drawings")
+        print("Loading drawings")
         borders = self.search_blockrefs("^Border.*")
         title_blocks = self.search_blockrefs("^TitleBlock.*")
         drawings = []
@@ -91,13 +91,21 @@ class PnID(CADDoc):
         print(f"{len(self.utility_connectors)} utility connectors.")
         # self.utility_connectors = self.wrap_blockrefs(self.blockrefs['Connector_Utility'])
 
-    def load_local_bubbles(self):
-        self.logger.info('Loading bubbles')
+    def get_local_bubbles(self) -> dict:
+        """
+        Index all local bubbles
+        :return: db[code][tag](blockref)
+        """
+        print('Loading bubbles')
+        db = {}
         for bubble in self.search_blockrefs(r'\w*_LOCAL$'):
-            code = get_attribute(bubble, 'FUNCTION')
-            number = get_attribute(bubble, 'TAG')
-            id = f'{code}-{number}'
-
+            code = get_attribute(bubble, 'FUNCTION').TextString
+            number = get_attribute(bubble, 'TAG').TextString
+            tag = f'{code}-{number}'
+            if code not in db.keys():
+                db[code] = defaultdict(list)
+            db[code][tag].append(bubble)
+        return db
 
     def wrap_blockrefs(self, blockrefs: List, wrapper) -> List:
         return [self.wrap_blockref(blockref, wrapper) for blockref in blockrefs]
