@@ -46,7 +46,7 @@ class CADDoc:
         self.app = get_acad_app()
         self.doc = None
         self.blockrefs = defaultdict(list)
-        self.logger = logging.getLogger(__name__)
+        # self.logger = logging.getLogger(__name__)
         self.load(filepath)
 
     def init_db(self):
@@ -54,7 +54,7 @@ class CADDoc:
 
     def load(self, filepath=None):
         self.doc = get_document(self.app, filepath)
-        self.logger.info(f"Current File: {self.doc.Name}")
+        print(f"Current File: {self.doc.Name}")
         self.init_db()
 
     def reload(self):
@@ -87,7 +87,7 @@ class CADDoc:
         return [CastTo(entity, dxf_entity.interface) for entity in entities]
 
     def gen_blockref_dict(self, by_select: bool = True) -> dict:
-        self.logger.info("Indexing blockrefs...")
+        print("Indexing blockrefs...")
         counter = 0
         db = defaultdict(list)
         if not self.doc:
@@ -101,7 +101,7 @@ class CADDoc:
             db[blockref.EffectiveName].append(blockref)
             counter += 1
 
-        self.logger.info(f"Indexing complete, {counter} blockrefs.")
+        print(f"Indexing complete, {counter} blockrefs.")
         return db
 
     def get_blockrefs(self, name: str = None) -> List:
@@ -198,7 +198,7 @@ class CADDoc:
 
     def replace_text(self, pattern, replacement):
         # scanning all
-        self.logger.info("Start text replacing.")
+        print("Start text replacing.")
         regex = re.compile(pattern)
         counter = 0
         for item in self.iter_all_texts():
@@ -206,7 +206,7 @@ class CADDoc:
                 item.TextString = result
                 counter += 1
 
-        self.logger.info(f'Replaced {counter} texts.')
+        print(f'Replaced {counter} texts.')
 
     def replace_block(self, from_block_name, to_block_name):
         self.replace_blockrefs(self.blockrefs[from_block_name], to_block_name)
@@ -214,13 +214,13 @@ class CADDoc:
     def replace_blockrefs(self, blockrefs, new_block_name):
         if not self.has_block(new_block_name):
             raise ValueError(f"There is no block named '{new_block_name}'")
-        self.logger.info("Start block replacing.")
+        print("Start block replacing.")
         counter = 0
         for blockref in blockrefs[:]:
             self.replace_blockref(blockref, new_block_name)
             counter += 1
 
-        self.logger.info(f"Replaced {counter} blockrefs.")
+        print(f"Replaced {counter} blockrefs.")
 
     def replace_blockref(self, blockref, new_block_name):
         location = Point(*blockref.InsertionPoint)

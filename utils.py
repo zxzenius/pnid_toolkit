@@ -105,7 +105,7 @@ def copy_dynamic_properties(source_bref, target_bref):
 
 def get_application(prog_id: str):
     # ref:https://gist.github.com/rdapaz/63590adb94a46039ca4a10994dff9dbe#gistcomment-2918299
-    logger = logging.getLogger(__name__)
+    # logger = logging.getLogger(__name__)
     try:
         return EnsureDispatch(prog_id)
     except AttributeError:
@@ -114,7 +114,7 @@ def get_application(prog_id: str):
         import shutil
         import win32com
         # Remove cache and try again.
-        logger.info('Regenerate cache...')
+        print('Regenerate cache...')
         gen_path = win32com.__gen_path__
         modules = [m.__name__ for m in sys.modules.values()]
         for module in modules:
