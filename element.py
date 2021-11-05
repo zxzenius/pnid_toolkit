@@ -10,7 +10,7 @@ class Element:
         self.attributes = get_attributes(blockref)
         self.dynamic_properties = get_dynamic_properties(blockref)
         self.drawing: Optional[Drawing] = None
-        self.ref = blockref
+        self.ent = blockref
 
     def __repr__(self):
         return f"<Element '{self.name}'>"
@@ -23,15 +23,15 @@ class Element:
 
     @property
     def position(self) -> Point:
-        return Point(*self.ref.InsertionPoint)
+        return Point(*self.ent.InsertionPoint)
 
     @property
     def name(self) -> str:
-        return self.ref.EffectiveName
+        return self.ent.EffectiveName
 
     @property
     def handle(self) -> str:
-        return self.ref.Handle
+        return self.ent.Handle
 
 
 class Connector(Element):
@@ -116,3 +116,48 @@ class MainConnector(Connector):
     @property
     def is_off_boundary(self) -> bool:
         return not self.is_off_drawing
+
+
+class Bubble(Element):
+    cls_name = 'Bubble'
+
+    @property
+    def code(self):
+        return self.get_attribute_text('FUNCTION')
+
+    @property
+    def number(self):
+        return self.get_attribute_text('TAG')
+
+    @property
+    def is_gauge(self):
+        return self.code.endswith('G')
+
+    @property
+    def is_transmitter(self):
+        return self.code.endswith('T')
+
+    @property
+    def is_sensor(self):
+        return self.code.endswith('E')
+
+    @property
+    def is_instrument(self):
+        return self.code not in ['PSV', 'PRV', 'FO', 'YL', 'HS', 'SC']
+
+    @property
+    def tag(self):
+        return f'{self.code}-{self.number}'
+
+    @property
+    def keyword(self):
+        if not self.is_instrument:
+            return self.code
+            # 'PD', 'TD' for PDT, TDT
+        elif self.code[1] == 'D':
+            return self.code[:2]
+        # 'PG', 'TG'
+        elif self.is_gauge:
+            return self.code
+        else:
+            return self.code[0]

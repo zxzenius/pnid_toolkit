@@ -1,9 +1,9 @@
 import logging
 from typing import List
 
+import win32com
 from win32com.client import VARIANT
 import pythoncom as p
-from win32com.client.gencache import EnsureDispatch
 
 from point import Point
 
@@ -107,12 +107,11 @@ def get_application(prog_id: str):
     # ref:https://gist.github.com/rdapaz/63590adb94a46039ca4a10994dff9dbe#gistcomment-2918299
     # logger = logging.getLogger(__name__)
     try:
-        return EnsureDispatch(prog_id)
+        return win32com.client.gencache.EnsureDispatch(prog_id)
     except AttributeError:
         import re
         import sys
         import shutil
-        import win32com
         # Remove cache and try again.
         print('Regenerate cache...')
         gen_path = win32com.__gen_path__
@@ -123,4 +122,5 @@ def get_application(prog_id: str):
         # Remove gen_py folder
         shutil.rmtree(gen_path)
         # reload
-        return win32com.client.gencache.EnsureDispatch(prog_id)
+        from win32com import client
+        return client.gencache.EnsureDispatch(prog_id)
