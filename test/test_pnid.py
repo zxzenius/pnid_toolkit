@@ -3,7 +3,7 @@ from pnid import PnID
 
 def main():
     p = PnID()
-    print(p.bubbles)
+    print(p.lines)
 
 
 if __name__ == '__main__':

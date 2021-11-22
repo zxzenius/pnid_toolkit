@@ -3,7 +3,7 @@ from typing import List
 
 from caddoc import CADDoc
 from drawing import Drawing
-from element import MainConnector, UtilityConnector, Bubble
+from components import MainConnector, UtilityConnector, Bubble, Line
 from point import Point
 
 
@@ -53,6 +53,7 @@ class PnID(CADDoc):
         self.main_connectors: List[MainConnector] = []
         self.utility_connectors: List[UtilityConnector] = []
         self.bubbles: List[Bubble] = []
+        self.lines: List[Line] = []
         super().__init__(filepath=filepath)
 
     def init_db(self):
@@ -60,6 +61,7 @@ class PnID(CADDoc):
         self.load_drawings()
         self.load_connectors()
         self.load_bubbles()
+        self.load_lines()
 
     def get_title_blocks(self):
         return self.search_blockrefs("^TitleBlock.*")
@@ -95,10 +97,10 @@ class PnID(CADDoc):
         print(f"{len(self.utility_connectors)} utility connectors.")
 
     def get_main_connectors(self):
-        return self.wrap_blockrefs(self.blockrefs['Connector_Main'], MainConnector)
+        return self.wrap_blockrefs(self.blockrefs.get('Connector_Main', []), MainConnector)
 
     def get_utility_connectors(self):
-        return self.wrap_blockrefs(self.blockrefs['Connector_Utility'], UtilityConnector)
+        return self.wrap_blockrefs(self.blockrefs.get('Connector_Utility', []), UtilityConnector)
 
     def load_bubbles(self):
         print('Loading bubbles')
@@ -108,6 +110,15 @@ class PnID(CADDoc):
     def get_bubbles(self) -> List[Bubble]:
         bubbles = self.search_blockrefs(r'\w+_(LOCAL|FRONT|BACK)')
         return self.wrap_blockrefs(bubbles, Bubble)
+
+    def load_lines(self):
+        print('Loading Lines')
+        self.lines = self.get_lines()
+        print(f'{len(self.lines)} lines.')
+
+    def get_lines(self) -> List[Line]:
+        lines = self.blockrefs.get('pipe_tag', []) + self.blockrefs.get('TAG_NUMBER', [])
+        return self.wrap_blockrefs(lines, Line)
 
     # def get_local_bubbles(self) -> dict:
     #     """

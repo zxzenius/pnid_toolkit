@@ -1,11 +1,16 @@
-from typing import Optional
+import re
+from collections import namedtuple
+from typing import Optional, NamedTuple
 
 from drawing import Drawing
 from point import Point
 from utils import extract_attributes, extract_dynamic_properties, get_attribute, get_attributes, get_dynamic_properties
 
 
-class Element:
+class BlockRefWrapper:
+    """
+    BlockRef Wrapper
+    """
     def __init__(self, blockref):
         self.attributes = get_attributes(blockref)
         self.dynamic_properties = get_dynamic_properties(blockref)
@@ -13,7 +18,7 @@ class Element:
         self.ent = blockref
 
     def __repr__(self):
-        return f"<Element '{self.name}'>"
+        return f"BlockRef('{self.name}')"
 
     def get_attribute_text(self, tag: str) -> str:
         return self.attributes[tag].TextString
@@ -34,9 +39,21 @@ class Element:
         return self.ent.Handle
 
 
-class Connector(Element):
-    cls_name = "Connector"
+class Component(BlockRefWrapper):
+    def __repr__(self):
+        if self.tag:
+            tag = f"'{self.tag}'"
+        else:
+            tag = 'Untagged'
 
+        return f"{self.__class__.__name__}({tag})"
+
+    @property
+    def tag(self):
+        return ''
+
+
+class Connector(Component):
     @property
     def tag_attr(self):
         return self.attributes["TAG"]
@@ -61,17 +78,12 @@ class Connector(Element):
     def link_drawing(self) -> str:
         return self.link_attr.TextString
 
-    def __repr__(self):
-        return f"<{self.cls_name} '{self.handle}'>"
-
 
 class UtilityConnector(Connector):
-    cls_name = "UtyConnector"
+    pass
 
 
 class MainConnector(Connector):
-    cls_name = "MainConnector"
-
     @property
     def route_attr(self):
         return self.attributes["OriginOrDestination"]
@@ -118,9 +130,7 @@ class MainConnector(Connector):
         return not self.is_off_drawing
 
 
-class Bubble(Element):
-    cls_name = 'Bubble'
-
+class Bubble(Component):
     @property
     def code(self):
         return self.get_attribute_text('FUNCTION')
@@ -150,7 +160,7 @@ class Bubble(Element):
         return f'{self.code}-{self.number}'
 
     @property
-    def keyword(self):
+    def loop_code(self):
         if not self.is_instrument:
             return self.code
             # 'PD', 'TD' for PDT, TDT
@@ -161,3 +171,121 @@ class Bubble(Element):
             return self.code
         else:
             return self.code[0]
+
+
+class Line(Component):
+    def __init__(self, blockref):
+        super().__init__(blockref)
+        self._service, self._number, self._size, self._spec, self._insulation = parse_line_tag(self.raw_tag)
+
+    def get_tag(self):
+        return self.get_attribute_text('TAG')
+
+    def gen_tag(self):
+        return gen_line_tag(self.service, self.number, self.size, self.spec, self.insulation)
+
+    @property
+    def raw_tag(self):
+        """
+        'TAG' prop of blockref
+        :return:
+        """
+        return self.get_tag()
+
+    @property
+    def tag(self):
+        """
+        Generated tag
+        :return:
+        """
+        return self.gen_tag()
+
+    def sync(self):
+        """
+        Sync 'TAG' of blockref with generated tag
+        :return:
+        """
+        self.attributes['TAG'] = self.tag
+
+    @property
+    def service(self):
+        return self._service
+
+    @service.setter
+    def service(self, value: str):
+        self._service = value
+        self.sync()
+
+    @property
+    def number(self):
+        return self._number
+
+    @number.setter
+    def number(self, value: str):
+        self._number = value
+        self.sync()
+
+    @property
+    def size(self):
+        return self._size
+
+    @size.setter
+    def size(self, value: str):
+        self._size = value
+        self.sync()
+
+    @property
+    def spec(self):
+        return self._spec
+
+    @spec.setter
+    def spec(self, value: str):
+        self._spec = value
+        self.sync()
+
+    @property
+    def insulation(self):
+        return self._insulation
+
+    @insulation.setter
+    def insulation(self, value: str):
+        self._insulation = value
+        self.sync()
+
+
+class LineTag(NamedTuple):
+    service: str
+    number: str
+    size: str
+    spec: str
+    insulation: str
+
+
+def parse_line_tag(tag: str):
+    pattern = r'([A-Z]+|\?)(\d+|\?)-(\w*|\?)-(\w*|\?)-*([A-Z]*)'
+    match = re.fullmatch(pattern, tag)
+    service = ''
+    number = ''
+    size = ''
+    spec = ''
+    insulation = ''
+    if match:
+        service, number, size, spec, insulation = match.groups()
+    return LineTag(service, number, size, spec, insulation)
+
+
+def gen_line_tag(service: str, number: str, size: str, spec: str, insulation: str):
+    tag = f'{placeholder(service)}{placeholder(number)}-{placeholder(size)}-{placeholder(spec)}'
+    if insulation:
+        tag = f'{tag}-{insulation}'
+    return tag
+
+
+def placeholder(text: str):
+    if not text:
+        text = '?'
+    return text
+
+
+class PureLine:
+    pass

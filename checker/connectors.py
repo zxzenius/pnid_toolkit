@@ -1,4 +1,4 @@
-from element import Connector
+from components import Connector
 from pnid import PnID
 from pprint import PrettyPrinter
 

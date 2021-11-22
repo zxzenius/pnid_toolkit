@@ -14,7 +14,7 @@ def switch_to_chs(p: PnID):
     counter = 0
     for connector in p.main_connectors + p.utility_connectors:
         # Exclude symbol legend
-        if int(connector.drawing.tag) > 10:
+        if (connector.drawing is not None) and int(connector.drawing.tag) > 10:
             set_to_chs(connector.service_attr)
             if hasattr(connector, "route_attr"):
                 set_to_chs(connector.route_attr)
