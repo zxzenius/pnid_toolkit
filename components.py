@@ -152,6 +152,10 @@ class Bubble(Component):
         return self.code.endswith('E')
 
     @property
+    def is_valve(self):
+        return self.code.endswith('V')
+
+    @property
     def is_instrument(self):
         return self.code not in ['PSV', 'PRV', 'FO', 'YL', 'HS', 'SC']
 
