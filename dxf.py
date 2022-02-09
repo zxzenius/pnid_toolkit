@@ -1,7 +1,11 @@
 class Entity:
-    def __init__(self, type_name: str, name: str):
-        self.type_name = type_name
+    def __init__(self, name: str, type_name: str = None):
+        # self.type_name = type_name
         self.name = name
+        if type_name is None:
+            self.type_name = name.upper()
+        else:
+            self.type_name = type_name
         self.object_name = f"AcDb{name}"
         self.interface = f"IAcad{name}"
 
@@ -9,14 +13,30 @@ class Entity:
         return f"<Entity '{self.name}'>"
 
 
-Arc = Entity("ARC", "Arc")
-BlockRef = Entity("INSERT", "BlockReference")
-Circle = Entity("CIRCLE", "Circle")
-Ellipse = Entity("ELLIPSE", "Ellipse")
-Line = Entity("LINE", "Line")
-MLine = Entity("MLINE", "MLine")
-MText = Entity("MTEXT", "MText")
-Point = Entity("POINT", "Point")
-Polyline = Entity("POLYLINE", "PolyLine")
-Spline = Entity("SPLINE", "Spline")
-Text = Entity("TEXT", "Text")
+A3DFace = Entity("3DFace")
+A3DPolyline = Entity("3DPolyline")
+A3DSolid = Entity("3DSolid")
+Arc = Entity("Arc")
+# Attribute = Entity("Attribute", "ATTRIB")
+BlockRef = Entity("BlockReference", "INSERT")
+# DimAligned = Entity("DimAligned")
+# DimDiametric = Entity("DimDiametric")
+# DimRadialLarge = Entity("DimRadialLarge")
+Circle = Entity("Circle")
+Ellipse = Entity("Ellipse")
+Hatch = Entity("Hatch")
+Leader = Entity("Leader")
+LightweightPolyline = Entity("LWPolyline")
+Line = Entity("Line")
+MLine = Entity("MLine")
+MText = Entity("MText")
+Point = Entity("Point")
+Polyline = Entity("Polyline")
+Region = Entity("Region")
+Solid = Entity("Solid")
+Spline = Entity("Spline")
+Text = Entity("Text")
+
+AllDrawingObjects = [A3DFace, A3DPolyline, A3DSolid, Arc, BlockRef, Circle, Ellipse, Hatch, Leader, LightweightPolyline,
+                     Line, MLine, MText,
+                     Point, Polyline, Region, Solid, Spline, Text]
