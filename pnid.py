@@ -48,7 +48,6 @@ def sorted_drawings(drawings: List[Drawing]):
 # todo: outline (mark) target entity for easy searching manually
 class PnID(CADDoc):
     def __init__(self, filepath: str = None):
-        # self.logger = logging.getLogger(__name__)
         self.drawings: List[Drawing] = []
         self.main_connectors: List[MainConnector] = []
         self.utility_connectors: List[UtilityConnector] = []
@@ -120,22 +119,6 @@ class PnID(CADDoc):
         lines = self.blockrefs.get('pipe_tag', []) + self.blockrefs.get('TAG_NUMBER', [])
         return self.wrap_blockrefs(lines, Line)
 
-    # def get_local_bubbles(self) -> dict:
-    #     """
-    #     Index all local bubbles
-    #     :return: db[code][tag](blockref)
-    #     """
-    #     print('Loading bubbles')
-    #     db = {}
-    #     for bubble in self.search_blockrefs(r'\w*_LOCAL$'):
-    #         code = get_attribute(bubble, 'FUNCTION').TextString
-    #         number = get_attribute(bubble, 'TAG').TextString
-    #         tag = f'{code}-{number}'
-    #         if code not in db.keys():
-    #             db[code] = defaultdict(list)
-    #         db[code][tag].append(bubble)
-    #     return db
-
     def wrap_blockrefs(self, blockrefs: List, wrapper):
         return [self.wrap_blockref(blockref, wrapper) for blockref in blockrefs]
 
@@ -149,153 +132,6 @@ class PnID(CADDoc):
             if Point(*blockref.InsertionPoint) in drawing:
                 return drawing
         return None
-    #
-    # def _read(self):
-    #     self.lines = []
-    #     self.bubbles = []
-    #     self.borders = []
-    #     self.title_blocks = dict()
-    #     counter = 0
-    #     self.error_lines = []
-    #     self.error_bubbles = []
-    #     self.valves = []
-    #
-    #     for item in self.doc.ModelSpace:
-    #         if item.ObjectName == 'AcDbBlockReference':
-    #             # For AutoCAD 2006, using IAcadBlockReference2
-    #             # block_ref = CastTo(item, 'IAcadBlockReference2')
-    #             # 2007 or higher version, using IAcadBlockReference
-    #             block_ref = CastTo(item, 'IAcadBlockReference')
-    #             block_name = block_ref.EffectiveName
-    #             # For pipe
-    #             if block_name == 'pipe_tag':
-    #                 # self._read_pipe(get_attributes(block_ref))
-    #                 continue
-    #             # For Inst Bubble
-    #             if block_name in ('DI_LOCAL', 'SH_PRI_FRONT'):
-    #                 # attributes = get_attributes(block_ref)
-    #                 # self._read_inst(get_attributes(block_ref))
-    #                 continue
-    #             # For Border, get bottom-left & top-right coordinates of bounding box
-    #             if block_name == 'Border.A1':
-    #                 self._read_border(block_ref)
-    #                 continue
-    #             # For Title Block
-    #             if block_name.startswith('TitleBlock.Xin'):
-    #                 self._read_title_block(block_ref)
-    #                 continue
-    #             # For HandValve, not Control Valve
-    #             if block_name.startswith('VAL_') and not block_name.startswith('VAL_CTRL'):
-    #                 self._read_valve(block_ref)
-    #                 continue
-    #
-    # def _read_pipe(self, attributes):
-    #     attr = attributes['TAG']
-    #     try:
-    #         self.lines.append(Line(attr.TextString))
-    #     except ValueError:
-    #         self.error_lines.append(attr.TextString)
-    #
-    # def _read_inst(self, attributes):
-    #     function_letters = attributes['FUNCTION'].TextString
-    #     loop_tag = attributes['TAG'].TextString
-    #     try:
-    #         self.bubbles.append(Bubble(function_letters, loop_tag))
-    #     except ValueError:
-    #         self.error_bubbles.append('%s-%s' % (function_letters, loop_tag))
-    #
-    # def _read_border(self, block_ref):
-    #     """
-    #     Get btm-left & top-right of border block using GetBoundingBox, append to borders
-    #     :param block_ref:
-    #     :return:
-    #     """
-    #     bottom_left, top_right = block_ref.GetBoundingBox()
-    #     self.borders.append((Point(bottom_left), Point(top_right)))
-    #
-    # def _read_title_block(self, block_ref):
-    #     """
-    #     Get dwg_no & insertion point of title block, insert to a dict to avoid duplicated dwg_no
-    #     :param block_ref:
-    #     :return:
-    #     """
-    #     dwg_number = get_attribute(block_ref, 'DWG.NO.').TextString
-    #     if dwg_number:
-    #         self.title_blocks[dwg_number] = Point(block_ref.InsertionPoint)
-    #
-    # def _read_valve(self, block_ref):
-    #     valve = Valve()
-    #     valve.handle = block_ref.Handle
-    #     valve.pos = Point(*block_ref.InsertionPoint)
-    #     valve.tag_handle = get_attribute(block_ref, 'TAG').Handle
-    #     valve.type_name = block_ref.EffectiveName[4::]
-    #     self.valves.append(valve)
-
-    # def read(self):
-    #     self.lines = []
-    #     self.bubbles = []
-    #     self.borders = []
-    #     self.title_blocks = dict()
-    #     counter = 0
-    #     self.error_lines = []
-    #     self.error_bubbles = []
-    #     self.valves = []
-    #
-    #     for item in self.doc.ModelSpace:
-    #         if item.ObjectName == 'AcDbBlockReference':
-    #             # For AutoCAD 2006, using IAcadBlockReference2
-    #             # block_ref = CastTo(item, 'IAcadBlockReference2')
-    #             # 2007 or higher version, using IAcadBlockReference
-    #             block_ref = CastTo(item, 'IAcadBlockReference')
-    #             block_name = block_ref.EffectiveName
-    #             # For pipe
-    #             if block_name == 'pipe_tag':
-    #                 # self._read_pipe(get_attributes(block_ref))
-    #                 continue
-    #             # For Inst Bubble
-    #             if block_name in ('DI_LOCAL', 'SH_PRI_FRONT'):
-    #                 # attributes = get_attributes(block_ref)
-    #                 # self._read_inst(get_attributes(block_ref))
-    #                 continue
-    #             # For Border, get bottom-left & top-right coordinates of bounding box
-    #             if block_name == 'Border.A1':
-    #                 self._read_border(block_ref)
-    #                 continue
-    #             # For Title Block
-    #             if block_name.startswith('TitleBlock.Xin'):
-    #                 self._read_title_block(block_ref)
-    #                 continue
-    #             # For HandValve, not Control Valve
-    #             if block_name.startswith('VAL_') and not block_name.startswith('VAL_CTRL'):
-    #                 self._read_valve(block_ref)
-    #                 continue
-    #
-    # def gen_dwg_map(self):
-    #     """
-    #     Generate dwg_no <-> coordinates for entity locating
-    #     :return: a dict
-    #     """
-    #     result = dict()
-    #     for dwg_number, insert_point in self.title_blocks.items():
-    #         for bottom_left, top_right in self.borders:
-    #             if is_in_box(insert_point, bottom_left, top_right):
-    #                 result[dwg_number] = (bottom_left, top_right)
-    #                 break
-    #     return result
-    #
-    # def locate_dwg_no(self, point):
-    #     """
-    #     Locate drawing number for input point
-    #     :param point: Point
-    #     :return: drawing number
-    #     """
-    #     for dwg_no, (bottom_left, top_right) in self.dwg_map.items():
-    #         if is_in_box(point, bottom_left, top_right):
-    #             return dwg_no
-    #     return None
-    #
-    # def _post_process(self):
-    #     self.dwg_map = self.gen_dwg_map()
 
 
 def gen_loops(instruments):
@@ -329,7 +165,4 @@ def gen_bones(items, keyword_attribute):
 
 
 if __name__ == '__main__':
-    pid = PnID()
-    # end_time = time.time()
-    # time_spent = end_time - start_time
-    # print('Time spent: %.2fs' % time_spent)
+    pnid = PnID()
