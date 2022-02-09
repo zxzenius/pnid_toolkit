@@ -60,7 +60,7 @@ class Connector(Component):
 
     @property
     def link_attr(self):
-        return self.attributes["DWG.No"]
+        return self.attributes["PID.No"]
 
     @property
     def service_attr(self):
@@ -89,11 +89,15 @@ class MainConnector(Connector):
         return self.attributes["OriginOrDestination"]
 
     @property
+    def is_flip(self) -> bool:
+        return self.get_dynamic_property_value("Flip")
+
+    @property
     def is_entering(self) -> bool:
         left_x = self.drawing.min_point.x
         right_x = self.drawing.max_point.x
         mid_x = (left_x + right_x) / 2
-        return (left_x < self.position.x < mid_x) == (not self.dynamic_properties["flip"])
+        return (left_x < self.position.x < mid_x) == (not self.is_flip)
 
     @property
     def is_exiting(self) -> bool:
@@ -123,7 +127,7 @@ class MainConnector(Connector):
 
     @property
     def is_off_drawing(self) -> bool:
-        return self.dynamic_properties["TYPE"].Value == "OFF-DRAWING"
+        return self.get_dynamic_property_value("TYPE") == "OFF-DRAWING"
 
     @property
     def is_off_boundary(self) -> bool:

@@ -6,15 +6,19 @@ from pprint import PrettyPrinter
 def problem_line(conn: Connector, problem: str) -> dict:
     return {
         "problem": problem,
-        "target": conn.handle,
+        # "target": conn.handle,
         "number": conn.tag,
         "drawing": get_dwg_num(conn),
-        "location": (round(conn.position.x, 2), round(conn.position.y, 2))
+        "location": (round(conn.position.x, 2), round(conn.position.y, 2)),
     }
 
 
 def number_matched(conn: Connector) -> bool:
-    # return conn.number[:-2] == conn.drawing.number[1:]
+    """
+    Check number convention
+    :param conn:
+    :return:
+    """
     return int(conn.tag[:-2]) == int(get_dwg_num(conn))
 
 
@@ -24,7 +28,7 @@ def is_excluded(conn: Connector) -> bool:
 
 
 def get_dwg_num(conn: Connector) -> str:
-    return conn.drawing.id[-4:]
+    return conn.drawing.id[-3:]
 
 
 def check(p: PnID):
@@ -39,22 +43,25 @@ def check_main(p: PnID) -> list:
     connectors = p.main_connectors
     problems = []
     for connector in connectors:
-        if is_excluded(connector):
-            continue
-        if not connector.tag:
-            problems.append(problem_line(connector, "Missing number"))
-        elif not (connector.is_to | connector.is_from):
-            problems.append(problem_line(connector, "Missing route"))
-        elif connector.is_entering != connector.is_from:
-            problems.append(problem_line(connector, "Wrong direction"))
-        elif connector.is_to & (not number_matched(connector)):
-            problems.append(problem_line(connector, "Wrong number when exiting"))
-        elif connector.is_off_drawing & connector.is_from & number_matched(connector):
-            problems.append(problem_line(connector, "Wrong number when entering"))
-        elif connector.is_off_boundary & bool(connector.link_drawing):
-            problems.append(problem_line(connector, "P&ID No. not blank in off-boundary conn"))
-        elif connector.is_off_drawing & (not bool(connector.link_drawing)):
-            problems.append(problem_line(connector, "Missing P&ID No. in off-drawing conn"))
+        try:
+            if is_excluded(connector):
+                continue
+            if not connector.tag:
+                problems.append(problem_line(connector, "Missing number"))
+            elif not (connector.is_to | connector.is_from):
+                problems.append(problem_line(connector, "Missing route"))
+            elif connector.is_entering != connector.is_from:
+                problems.append(problem_line(connector, "Wrong direction"))
+            elif connector.is_to & (not number_matched(connector)):
+                problems.append(problem_line(connector, "Wrong number when exiting"))
+            elif connector.is_off_drawing & connector.is_from & number_matched(connector):
+                problems.append(problem_line(connector, "Wrong number when entering"))
+            elif connector.is_off_boundary & bool(connector.link_drawing):
+                problems.append(problem_line(connector, "P&ID No. not blank in off-boundary conn"))
+            elif connector.is_off_drawing & (not bool(connector.link_drawing)):
+                problems.append(problem_line(connector, "Missing P&ID No. in off-drawing conn"))
+        except KeyError as err:
+            problems.append(problem_line(connector, str(err)))
     print(f"{len(problems)} problems detected:")
     return problems
 
