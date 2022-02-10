@@ -1,6 +1,6 @@
-from typing import Union
+from typing import Optional
 
-from utils import is_in_box, extract_attributes, get_attributes
+from utils import is_in_box, get_attributes
 from point import Point
 
 
@@ -44,23 +44,24 @@ class Drawing:
         self._attrs = get_attributes(blockref)
 
     @property
-    def id(self) -> Union[None, str]:
-        if not self.title_block:
+    def tag(self) -> Optional[str]:
+        if not self.has_title:
             return None
         return self._attrs["DWG.NO."].TextString
 
-    @id.setter
-    def id(self, value: str):
-        if self.title_block:
+    @tag.setter
+    def tag(self, value: str):
+        if self.has_title:
             self._attrs["DWG.NO."].TextString = value
+        else:
+            raise ValueError("No title block in the drawing.")
 
     @property
-    def tag(self):
-        if self.id:
-            return self.id[-4:]
-
-    @property
-    def number(self):
+    def number(self) -> str:
+        """
+        For internal usage
+        :return:
+        """
         return self._number
 
     @number.setter

@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List
+from typing import List, Optional
 
 from caddoc import CADDoc
 from drawing import Drawing
@@ -127,7 +127,7 @@ class PnID(CADDoc):
         target.drawing = self.locate(blockref)
         return target
 
-    def locate(self, blockref):
+    def locate(self, blockref) -> Optional[Drawing]:
         for drawing in self.drawings:
             if Point(*blockref.InsertionPoint) in drawing:
                 return drawing

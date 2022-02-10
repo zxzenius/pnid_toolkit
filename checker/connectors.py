@@ -1,50 +1,63 @@
-from components import Connector
+from collections import defaultdict
+from typing import List
+
+from components import Connector, MainConnector
+from config import load_config
 from pnid import PnID
 from pprint import PrettyPrinter
 
 
-def problem_line(conn: Connector, problem: str) -> dict:
+def problem_line(connector: Connector, problem: str) -> dict:
     return {
         "problem": problem,
         # "target": conn.handle,
-        "number": conn.tag,
-        "drawing": get_dwg_num(conn),
-        "location": (round(conn.position.x, 2), round(conn.position.y, 2)),
+        "number": connector.tag,
+        "drawing": connector.drawing.tag,
+        "location": (round(connector.position.x, 2), round(connector.position.y, 2)),
     }
 
 
-def number_matched(conn: Connector) -> bool:
+def number_matched(connector: Connector, config: dict) -> bool:
     """
     Check number convention
-    :param conn:
-    :return:
     """
-    return int(conn.tag[:-2]) == int(get_dwg_num(conn))
+    connector_prefix = connector.tag[:config["drawing"]["number_digits"]]
+    return connector_prefix == get_dwg_number(connector, config)
 
 
-def is_excluded(conn: Connector) -> bool:
+def is_excluded(connector: Connector, config: dict) -> bool:
     # exclude legend drawings
-    return int(get_dwg_num(conn)) < 10
+    dwg_number = get_dwg_number(connector, config)
+    return int(get_unit(dwg_number, config)) < config["drawing"]["start_unit"]
 
 
-def get_dwg_num(conn: Connector) -> str:
-    return conn.drawing.id[-3:]
+def get_dwg_number(connector: Connector, config: dict) -> str:
+    digits = config["drawing"]["number_digits"]
+    return connector.drawing.tag[-digits:]
 
 
-def check(p: PnID):
+def get_unit(number: str, config: dict) -> str:
+    return number[:config["drawing"]["unit_digits"]]
+
+
+def get_seq(number: str, config: dict) -> str:
+    return number[config["drawing"]["unit_digits"]:]
+
+
+def check(pnid: PnID, config: dict):
     pretty = PrettyPrinter()
     print("MainConnectors:")
-    pretty.pprint(check_main(p))
+    pretty.pprint(check_main(pnid, config))
     print("UtilityConnectors:")
-    pretty.pprint(check_utility(p))
+    pretty.pprint(check_utility(pnid, config))
 
 
-def check_main(p: PnID) -> list:
-    connectors = p.main_connectors
+def check_main(pnid: PnID, config: dict) -> list:
+    connectors = pnid.main_connectors
     problems = []
     for connector in connectors:
         try:
-            if is_excluded(connector):
+            if is_excluded(connector, config):
                 continue
             if not connector.tag:
                 problems.append(problem_line(connector, "Missing number"))
@@ -52,14 +65,14 @@ def check_main(p: PnID) -> list:
                 problems.append(problem_line(connector, "Missing route"))
             elif connector.is_entering != connector.is_from:
                 problems.append(problem_line(connector, "Wrong direction"))
-            elif connector.is_to & (not number_matched(connector)):
+            elif connector.is_to & (not number_matched(connector, config)):
                 problems.append(problem_line(connector, "Wrong number when exiting"))
-            elif connector.is_off_drawing & connector.is_from & number_matched(connector):
+            elif connector.is_off_drawing & connector.is_from & number_matched(connector, config):
                 problems.append(problem_line(connector, "Wrong number when entering"))
             elif connector.is_off_boundary & bool(connector.link_drawing):
-                problems.append(problem_line(connector, "P&ID No. not blank in off-boundary conn"))
+                problems.append(problem_line(connector, "P&ID No. not blank in off-boundary connector"))
             elif connector.is_off_drawing & (not bool(connector.link_drawing)):
-                problems.append(problem_line(connector, "Missing P&ID No. in off-drawing conn"))
+                problems.append(problem_line(connector, "Missing P&ID No. in off-drawing connector"))
         except KeyError as err:
             problems.append(problem_line(connector, str(err)))
     print(f"{len(problems)} problems detected:")
@@ -75,10 +88,10 @@ def check_basic(connector: Connector) -> list:
     return problems
 
 
-def check_utility(p: PnID) -> list:
+def check_utility(pnid: PnID, config: dict) -> list:
     problems = []
-    for connector in p.utility_connectors:
-        if is_excluded(connector):
+    for connector in pnid.utility_connectors:
+        if is_excluded(connector, config):
             continue
         if not connector.tag:
             problems.append(problem_line(connector, "Missing number"))
@@ -86,6 +99,29 @@ def check_utility(p: PnID) -> list:
     return problems
 
 
+def show_links(main_connectors: List[MainConnector], config: dict):
+    problems = []
+    links_report = []
+    links = defaultdict(list)
+    # build db
+    for connector in main_connectors:
+        links[connector.tag].append(connector)
+    # make pair
+    for tag in sorted(links):
+        if len(links[tag]) < 3:
+            start_connector = None
+            end_connector = None
+            for connector in links[tag]:
+                if connector.is_from:
+                    end_connector = connector
+                elif connector.is_to:
+                    start_connector = connector
+            if start_connector and end_connector:
+                pass
+        else:
+            problems.append(links)
+
+
 if __name__ == "__main__":
-    p = PnID()
-    check(p)
+    # p = PnID()
+    # check(p, load_config())

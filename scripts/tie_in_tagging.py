@@ -13,7 +13,7 @@ def tagging(pnid: PnID):
     # Group by drawing
     for tpoint in pnid.blockrefs["TieIn"]:
         drawing = pnid.locate(tpoint)
-        tpoints_by_drawing[int(drawing.id[-4:])].append(tpoint)
+        tpoints_by_drawing[int(drawing.tag[-4:])].append(tpoint)
 
     for number in sorted(tpoints_by_drawing):
 
