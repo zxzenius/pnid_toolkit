@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List
+from typing import List, Iterable
 
 from components import Connector, MainConnector
 from config import load_config
@@ -99,7 +99,7 @@ def check_utility(pnid: PnID, config: dict) -> list:
     return problems
 
 
-def show_links(main_connectors: List[MainConnector], config: dict):
+def show_links(main_connectors: Iterable[MainConnector], config: dict):
     problems = []
     links_report = []
     links = defaultdict(list)
@@ -117,9 +117,15 @@ def show_links(main_connectors: List[MainConnector], config: dict):
                 elif connector.is_to:
                     start_connector = connector
             if start_connector and end_connector:
-                pass
+                start_info = f'[{get_dwg_number(start_connector, config)}]{end_connector.endpoint}'
+                end_info = f'[{get_dwg_number(end_connector, config)}]{start_connector.endpoint}'
+                links_report.append(f'{tag}: {start_info} -> {end_info}')
         else:
-            problems.append(links)
+            problems.append(f'Duplicate number with link <{tag}>')
+
+
+def report(pnid: PnID, config: dict):
+
 
 
 if __name__ == "__main__":

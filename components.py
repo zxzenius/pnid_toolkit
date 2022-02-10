@@ -84,6 +84,9 @@ class UtilityConnector(Connector):
 
 
 class MainConnector(Connector):
+    __words_to = ('TO', '至')
+    __words_from = ('FROM', '自')
+
     @property
     def route_attr(self):
         return self.attributes["OriginOrDestination"]
@@ -112,15 +115,24 @@ class MainConnector(Connector):
         self.route_attr.TextString = value
 
     @property
+    def endpoint(self) -> str:
+        if self.is_to or self.is_from:
+            for keyword in MainConnector.__words_to + MainConnector.__words_from:
+                if self.route.startswith(keyword):
+                    return self.route[:len(keyword)].strip()
+        else:
+            return ""
+
+    @property
     def is_to(self) -> bool:
-        for keyword in ('TO', '至'):
+        for keyword in MainConnector.__words_to:
             if self.route.startswith(keyword):
                 return True
         return False
 
     @property
     def is_from(self) -> bool:
-        for keyword in ('FROM', '自'):
+        for keyword in MainConnector.__words_from:
             if self.route.startswith(keyword):
                 return True
         return False
