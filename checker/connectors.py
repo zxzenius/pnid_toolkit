@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List, Iterable
+from typing import Iterable
 
 from components import Connector, MainConnector
 from config import load_config
@@ -106,6 +106,7 @@ def show_links(main_connectors: Iterable[MainConnector], config: dict):
     # build db
     for connector in main_connectors:
         links[connector.tag].append(connector)
+    # print(links)
     # make pair
     for tag in sorted(links):
         if len(links[tag]) < 3:
@@ -123,11 +124,18 @@ def show_links(main_connectors: Iterable[MainConnector], config: dict):
         else:
             problems.append(f'Duplicate number with link <{tag}>')
 
+    return links_report
+
 
 def report(pnid: PnID, config: dict):
-
+    connectors = [connector for connector in pnid.main_connectors if not is_excluded(connector, config)]
+    links = show_links(connectors, config)
+    for link in links:
+        print(link)
 
 
 if __name__ == "__main__":
-    # p = PnID()
-    # check(p, load_config())
+    pnid = PnID()
+    config = load_config(r'..\config.ini')
+    # check(pnid, config)
+    report(pnid, config)

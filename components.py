@@ -119,7 +119,7 @@ class MainConnector(Connector):
         if self.is_to or self.is_from:
             for keyword in MainConnector.__words_to + MainConnector.__words_from:
                 if self.route.startswith(keyword):
-                    return self.route[:len(keyword)].strip()
+                    return self.route[len(keyword):].strip()
         else:
             return ""
 
