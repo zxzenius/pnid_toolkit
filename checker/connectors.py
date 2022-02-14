@@ -61,17 +61,17 @@ def check_main(pnid: PnID, config: dict) -> list:
                 continue
             if not connector.tag:
                 problems.append(problem_line(connector, "Missing number"))
-            elif not (connector.is_to | connector.is_from):
+            elif not (connector.is_to or connector.is_from):
                 problems.append(problem_line(connector, "Missing route"))
             elif connector.is_entering != connector.is_from:
                 problems.append(problem_line(connector, "Wrong direction"))
-            elif connector.is_to & (not number_matched(connector, config)):
+            elif connector.is_to and (not number_matched(connector, config)):
                 problems.append(problem_line(connector, "Wrong number when exiting"))
-            elif connector.is_off_drawing & connector.is_from & number_matched(connector, config):
+            elif connector.is_off_drawing and connector.is_from and number_matched(connector, config):
                 problems.append(problem_line(connector, "Wrong number when entering"))
-            elif connector.is_off_boundary & bool(connector.link_drawing):
+            elif connector.is_off_boundary and bool(connector.link_drawing):
                 problems.append(problem_line(connector, "P&ID No. not blank in off-boundary connector"))
-            elif connector.is_off_drawing & (not bool(connector.link_drawing)):
+            elif connector.is_off_drawing and (not bool(connector.link_drawing)):
                 problems.append(problem_line(connector, "Missing P&ID No. in off-drawing connector"))
         except KeyError as err:
             problems.append(problem_line(connector, str(err)))
@@ -97,6 +97,10 @@ def check_utility(pnid: PnID, config: dict) -> list:
             problems.append(problem_line(connector, "Missing number"))
 
     return problems
+
+
+def match_links(pnid: PnID, config: dict):
+    pass
 
 
 def show_links(main_connectors: Iterable[MainConnector], config: dict):
@@ -135,7 +139,7 @@ def report(pnid: PnID, config: dict):
 
 
 if __name__ == "__main__":
-    pnid = PnID()
-    config = load_config(r'..\config.ini')
+    p = PnID()
+    conf = load_config(r'..\config.ini')
     # check(pnid, config)
-    report(pnid, config)
+    report(p, conf)
