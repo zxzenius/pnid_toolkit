@@ -52,6 +52,10 @@ def check(pnid: PnID, config: dict):
     pretty.pprint(check_utility(pnid, config))
 
 
+def describe(connector: Connector) -> str:
+    return f"[{connector.drawing.tag}]:<{connector.tag}>{connector.position}"
+
+
 def check_main(pnid: PnID, config: dict) -> list:
     connectors = pnid.main_connectors
     problems = []
@@ -126,20 +130,27 @@ def show_links(main_connectors: Iterable[MainConnector], config: dict):
                 end_info = f'[{get_dwg_number(end_connector, config)}]{start_connector.endpoint}'
                 links_report.append(f'{tag}: {start_info} -> {end_info}')
         else:
-            problems.append(f'Duplicate number with link <{tag}>')
+            c_line = ""
+            for c in links[tag]:
+                c_line += describe(c)
+            problems.append(f'{tag}: {c_line}')
 
-    return links_report
+    return links_report, problems
 
 
 def report(pnid: PnID, config: dict):
     connectors = [connector for connector in pnid.main_connectors if not is_excluded(connector, config)]
-    links = show_links(connectors, config)
+    links, problems = show_links(connectors, config)
+    print("===Links===")
     for link in links:
         print(link)
+    print("===Problems===")
+    for problem in problems:
+        print(problem)
 
 
 if __name__ == "__main__":
     p = PnID()
     conf = load_config(r'..\config.ini')
-    # check(pnid, config)
+    check(p, conf)
     report(p, conf)
