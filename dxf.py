@@ -37,6 +37,8 @@ Solid = Entity("Solid")
 Spline = Entity("Spline")
 Text = Entity("Text")
 
+All2DLines = (Line, LightweightPolyline)
+
 AllDrawingObjects = [A3DFace, A3DPolyline, A3DSolid, Arc, BlockRef, Circle, Ellipse, Hatch, Leader, LightweightPolyline,
                      Line, MLine, MText,
                      Point, Polyline, Region, Solid, Spline, Text]
