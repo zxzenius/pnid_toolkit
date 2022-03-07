@@ -78,14 +78,40 @@ class Connector(Component):
     def link_drawing(self) -> str:
         return self.link_attr.TextString
 
+    @property
+    def service(self) -> str:
+        return self.service_attr.TextString
+
 
 class UtilityConnector(Connector):
-    pass
+    _length = 18
+    _height = 12
+
+    @property
+    def left_anchor(self) -> Point:
+        return self.position
+
+    @property
+    def right_anchor(self) -> Point:
+        return Point(self.position.x + self._length, self.position.y, self.position.z)
+
+    @property
+    def top_anchor(self) -> Point:
+        return Point(self.position.x + self._length / 2,
+                     self.position.y + self._height / 2,
+                     self.position.z)
+
+    @property
+    def bottom_anchor(self) -> Point:
+        return Point(self.position.x + self._length /2,
+                     self.position.y - self._height /2,
+                     self.position.z)
 
 
 class MainConnector(Connector):
     __words_to = ('TO', '至')
     __words_from = ('FROM', '自')
+    _length = 42
 
     @property
     def route_attr(self):
@@ -144,6 +170,14 @@ class MainConnector(Connector):
     @property
     def is_off_boundary(self) -> bool:
         return not self.is_off_drawing
+
+    @property
+    def left_anchor(self) -> Point:
+        return self.position
+
+    @property
+    def right_anchor(self) -> Point:
+        return Point(x=self.position.x + self._length, y=self.position.y, z=self.position.z)
 
 
 class Bubble(Component):
