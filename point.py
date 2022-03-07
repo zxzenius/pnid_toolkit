@@ -2,6 +2,6 @@ from typing import NamedTuple
 
 
 class Point(NamedTuple):
-    x: float
-    y: float
-    z: float
+    x: float = 0
+    y: float = 0
+    z: float = 0
