@@ -223,23 +223,37 @@ class CADDoc:
         print(f"Replaced {counter} blockrefs.")
 
     def replace_blockref(self, blockref, new_block_name):
-        location = Point(*blockref.InsertionPoint)
-        new_blockref = self.doc.ModelSpace.InsertBlock(
-            vt_point(location),
-            new_block_name,
-            blockref.XScaleFactor,
-            blockref.YScaleFactor,
-            blockref.ZScaleFactor,
-            blockref.Rotation,
-            None)
+        position = Point(*blockref.InsertionPoint)
+        new_blockref = self.insert_block(
+            position=position,
+            block_name=new_block_name,
+            x_scale=blockref.XScaleFactor,
+            y_scale=blockref.YScaleFactor,
+            z_scale=blockref.ZScaleFactor,
+            rotation=blockref.Rotation)
         new_blockref.Layer = blockref.Layer
         copy_attributes(blockref, new_blockref)
         if new_blockref.IsDynamicBlock and blockref.IsDynamicBlock:
             copy_dynamic_properties(blockref, new_blockref)
-        self.blockrefs[new_block_name].append(new_blockref)
+        self.remove_blockref(blockref)
+        return new_blockref
+
+    def insert_block(self, position: Point, block_name: str, x_scale: float = 1, y_scale: float = 1, z_scale: float = 1,
+                     rotation: float = 0):
+        blockref = self.doc.ModelSpace.InsertBlock(
+            vt_point(position),
+            block_name,
+            x_scale,
+            y_scale,
+            z_scale,
+            rotation,
+            None)
+        self.blockrefs[blockref.EffectiveName].append(blockref)
+        return blockref
+
+    def remove_blockref(self, blockref):
         self.blockrefs[blockref.EffectiveName].remove(blockref)
         blockref.Delete()
-        return new_blockref
 
     def has_block(self, name):
         for block in self.doc.Blocks:
