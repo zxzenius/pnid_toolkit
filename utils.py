@@ -1,4 +1,3 @@
-import logging
 from typing import List
 
 import win32com
@@ -14,6 +13,10 @@ def vt_int_array(values: List[int]) -> VARIANT:
 
 def vt_variant_array(values: List) -> VARIANT:
     return VARIANT(p.VT_ARRAY | p.VT_VARIANT, values)
+
+
+def vt_variant_short_int(value: int) -> VARIANT:
+    return VARIANT(p.VT_I2, value)
 
 
 def vt_point(point: Point) -> VARIANT:
@@ -100,7 +103,18 @@ def copy_dynamic_properties(source_bref, target_bref):
     new_props = get_dynamic_properties(target_bref)
     for name in new_props:
         if name in old_props:
-            new_props[name].Value = old_props[name].Value
+            if is_bool_prop(new_props[name]):
+                new_props[name].Value = vt_variant_short_int(old_props[name].Value)
+            else:
+                new_props[name].Value = old_props[name].Value
+
+
+def is_bool_prop(dyn_prop):
+    if len(dyn_prop.AllowedValues) == 2:
+        if 0 in dyn_prop.AllowedValues and 1 in dyn_prop.AllowedValues:
+            return True
+
+    return False
 
 
 def get_application(prog_id: str):
@@ -124,3 +138,9 @@ def get_application(prog_id: str):
         # reload
         from win32com import client
         return client.gencache.EnsureDispatch(prog_id)
+
+
+def delta_move(drawing_object, delta_x: float = 0, delta_y: float = 0, delta_z: float = 0):
+    point1 = vt_point(Point(0, 0, 0))
+    point2 = vt_point(Point(delta_x, delta_y, delta_z))
+    drawing_object.Move(point1, point2)
