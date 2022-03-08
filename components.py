@@ -23,8 +23,14 @@ class BlockRefWrapper:
     def get_attribute_text(self, tag: str) -> str:
         return self.attributes[tag].TextString
 
+    def set_attribute_text(self, tag: str, text: str):
+        self.attributes[tag].TextString = text
+
     def get_dynamic_property_value(self, name: str):
         return self.dynamic_properties[name].Value
+
+    def set_dynamic_property_value(self, name: str, value):
+        self.dynamic_properties[name].Value = value
 
     @property
     def position(self) -> Point:
@@ -182,12 +188,28 @@ class MainConnector(Connector):
 
 class Bubble(Component):
     @property
-    def code(self):
-        return self.get_attribute_text('FUNCTION')
+    def code_attr(self):
+        return self.attributes['FUNCTION']
 
     @property
-    def number(self):
-        return self.get_attribute_text('TAG')
+    def number_attr(self):
+        return self.attributes['TAG']
+
+    @property
+    def code(self) -> str:
+        return self.code_attr.TextString
+
+    @code.setter
+    def code(self, value: str):
+        self.code_attr.TextString = value
+
+    @property
+    def number(self) -> str:
+        return self.number_attr.TextString
+
+    @number.setter
+    def number(self, value: str):
+        self.number_attr.TextString = value
 
     @property
     def is_gauge(self):
